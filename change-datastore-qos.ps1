@@ -1,3 +1,4 @@
+#script to change Storage QoS settings after inputting the volume name and new QoS settings
 Write-Host
 $name = Read-Host "Volume Name"
 
