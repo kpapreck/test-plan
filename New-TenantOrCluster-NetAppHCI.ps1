@@ -110,11 +110,11 @@ param(
         [Parameter(Mandatory=$false)]
         [Int]$StartingNumber=0,
         [Parameter(Mandatory=$true)]
-        [Int]$min,
+        [Single]$min,
         [Parameter(Mandatory=$true)]
-        [Int]$max,
+        [Single]$max,
         [Parameter(Mandatory=$true)]
-        [Int]$burst,
+        [Single]$burst,
         [Parameter(Mandatory=$false,
         ParameterSetName='CustomSecrets')]
         [ValidateLength(12,16)]
