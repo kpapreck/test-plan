@@ -9,6 +9,10 @@ if ($check -lt 1){
  break
 }
 
+#Show Current QoS
+$name2 = get-sfvolume -Name $name | select Qos
+echo "Current QoS Setting $name2"
+
 #INPUT QOS#
 [single]$min = Read-Host "Min IOPS"
 [single]$max = Read-Host "Max IOPS"
@@ -24,8 +28,6 @@ if ($burst -lt $max){
  break
  }
 
-$name2 = get-sfvolume -Name $name | select Qos
-echo "Existing QoS Settings on Volume"  $name2
-Get-SFVolume -Name $name | Set-SFVolume -MinIOPS $min -MaxIOPS $max -BurstIOPS $burst
+Get-SFVolume -Name $name | Set-SFVolume -MinIOPS $min -MaxIOPS $max -BurstIOPS $burst -Confirm:$false
 #echo "New QoS Setting: get-sfvolume -Name $name | select Name, Qos, VolumeID"
 
