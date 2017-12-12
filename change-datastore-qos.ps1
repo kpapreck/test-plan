@@ -25,7 +25,7 @@ if ($burst -lt $max){
  }
 
 $name2 = get-sfvolume -Name $name | select Qos
-echo $name2
+echo "Existing QoS Settings on Volume"  $name2
 Get-SFVolume -Name $name | Set-SFVolume -MinIOPS $min -MaxIOPS $max -BurstIOPS $burst
 #echo "New QoS Setting: get-sfvolume -Name $name | select Name, Qos, VolumeID"
 
