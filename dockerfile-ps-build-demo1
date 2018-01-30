@@ -1,0 +1,23 @@
+FROM kpapreck/solidfire-ps-powershell-build
+
+#FIRST YOU NEED TO DOWNLOAD POWERCLI_CORE AND STAGE IT TO YOUR PRESENT WORKING DIRECTORY
+
+#Download the latest PowerCLI_Core from Vmware to your pwd: https://labs.vmware.com/flings/powercli-core#instructions
+
+#Copy downloaded file into the container 
+COPY PowerCLI_Core.zip /
+
+
+#IMAGE CUSTOMIZATION TO AUTO-CONNECT
+#un-comment the following two lines and enter the required credentials to auto-connect
+RUN echo "connect-sfcluster -target 10.1.1.100 -user admin -password solidfire" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
+RUN echo "connect-viserver -server 10.1.1.30 -user administrator@demo1.local -password !1Solidfire" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
+
+RUN cp PowerCLI_Core.zip /usr/local/share/powershell/Modules/
+WORKDIR /usr/local/share/powershell/Modules
+RUN unzip PowerCLI_Core.zip
+RUN unzip PowerCLI.ViCore.zip
+RUN unzip PowerCLI.Vds.zip
+
+WORKDIR /scripts
+

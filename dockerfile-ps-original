@@ -7,11 +7,7 @@ RUN sudo apt-get install apt-transport-https -y
 RUN sudo apt-get update -y
 RUN sudo apt-get install unzip -y
 
-#Download the latest PowerCLI_Core from Vmware to your pwd: https://labs.vmware.com/flings/powercli-core#instructions
-
-#Copy downloaded file into the container 
-COPY PowerCLI_Core.zip /
-
+#Setup older PowerShell for compatibility with PowerCLI_Core
 RUN curl -SLO https://github.com/PowerShell/PowerShell/releases/download/v6.0.0-alpha.18/powershell_6.0.0-alpha.18-1ubuntu1.14.04.1_amd64.deb
 RUN apt-get install libunwind8 libicu52 libcurl3 -y
 RUN dpkg -i powershell_6.0.0-alpha.18-1ubuntu1.14.04.1_amd64.deb
@@ -21,23 +17,10 @@ RUN apt-get install -f
 RUN sudo su
 RUN mkdir -p /usr/local/share/powershell/Modules/SolidFire
 RUN cd /usr/local/share/powershell/Modules/SolidFire && curl --remote-name-all https://raw.githubusercontent.com/solidfire/sdk-dotnet/master/package/SolidFire.SDK.dll https://raw.githubusercontent.com/solidfire/PowerShell/1.4/packages/Newtonsoft.Json.dll https://raw.githubusercontent.com/solidfire/PowerShell/1.4/packages/SolidFire.dll https://raw.githubusercontent.com/solidfire/PowerShell/1.4/packages/SolidFire.psd1 https://raw.githubusercontent.com/solidfire/PowerShell/1.4/packages/Initialize-SFEnvironment.ps1 https://raw.githubusercontent.com/solidfire/PowerShell/1.4/packages/SolidFire.dll-help.xml >/dev/null && cd -
-
 RUN  echo ". /usr/local/share/powershell/Modules/SolidFire/Initialize-SFEnvironment.ps1" > /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
 
 #install PowerCLI Pre-requisites
 RUN echo "Get-Module -ListAvailable PowerCLI* | Import-Module" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
 RUN echo "Set-PowerCLIConfiguration  -InvalidCertificateAction Ignore" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
 
-#IMAGE CUSTOMIZATION TO AUTO-CONNECT
-#un-comment the following two lines and enter the required credentials to auto-connect
-#RUN echo "connect-sfcluster -target <mvip> -user <user> -password <password>" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
-#RUN echo "connect-viserver -server <server> -user <user> -password <password>" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
-
-RUN cp PowerCLI_Core.zip /usr/local/share/powershell/Modules/
-WORKDIR /usr/local/share/powershell/Modules
-RUN unzip PowerCLI_Core.zip
-RUN unzip PowerCLI.ViCore.zip
-RUN unzip PowerCLI.Vds.zip
-WORKDIR /scripts
-
-
+#NOTE - THIS IMAGE IS ONLY FOR PRE-REQUISITES. YOU NEED TO FOLLOW THE INSTRUCTIONS TO COMPLETE THE BUILD WITH POWERCLI_CORE

@@ -1,3 +1,5 @@
 /dev/*
 dockerfile-kp
 PowerCLI_Core.zip
+dockerfile-build-kp.sh
+/backup/*
