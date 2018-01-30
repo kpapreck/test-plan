@@ -29,7 +29,7 @@ RUN echo "Get-Module -ListAvailable PowerCLI* | Import-Module" >> /opt/microsoft
 RUN echo "Set-PowerCLIConfiguration  -InvalidCertificateAction Ignore" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
 
 #IMAGE CUSTOMIZATION TO AUTO-CONNECT
-# un-comment the following two lines and enter the required credentials to auto-connect
+#un-comment the following two lines and enter the required credentials to auto-connect
 #RUN echo "connect-sfcluster -target <mvip> -user <user> -password <password>" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
 #RUN echo "connect-viserver -server <server> -user <user> -password <password>" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
 
