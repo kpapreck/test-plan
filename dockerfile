@@ -27,19 +27,17 @@ RUN  echo ". /usr/local/share/powershell/Modules/SolidFire/Initialize-SFEnvironm
 #install PowerCLI Pre-requisites
 RUN echo "Get-Module -ListAvailable PowerCLI* | Import-Module" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
 RUN echo "Set-PowerCLIConfiguration  -InvalidCertificateAction Ignore" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
-RUN echo "connect-sfcluster -target 10.1.1.100 -user admin -password solidfire" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
-RUN echo "connect-viserver -server 10.1.1.30 -user administrator@demo1.local -password !1Solidfire" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
+
+#IMAGE CUSTOMIZATION TO AUTO-CONNECT
+# un-comment the following two lines and enter the required credentials to auto-connect
+#RUN echo "connect-sfcluster -target <mvip> -user <user> -password <password>" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
+#RUN echo "connect-viserver -server <server> -user <user> -password <password>" >> /opt/microsoft/powershell/6.0.0-alpha.18/profile.ps1
 
 RUN cp PowerCLI_Core.zip /usr/local/share/powershell/Modules/
 WORKDIR /usr/local/share/powershell/Modules
 RUN unzip PowerCLI_Core.zip
 RUN unzip PowerCLI.ViCore.zip
 RUN unzip PowerCLI.Vds.zip
+WORKDIR /scripts
 
-#Bring in Test Plan Scripts
-#WORKDIR /
-#RUN apt-get install git -y
-#RUN mkdir scripts
-#RUN cd scripts
-#RUN git clone https://github.com/kpapreck/test-plan
 
