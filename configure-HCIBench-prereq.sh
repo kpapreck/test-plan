@@ -1,5 +1,5 @@
 #yum install -y yum-utils device-mapper-persistent-data lvm2
-tdnf install docker
+tdnf install docker -y
 systemctl start docker
 systemctl enable docker
 tdnf install git -y
