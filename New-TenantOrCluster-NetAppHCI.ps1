@@ -251,7 +251,7 @@ Write-Host "Creating the new datastores on ESXi host $($vmhost.Name)"
 
 foreach($volume in $volumes){
     $canonicalname = "naa." + $volume.ScsiNAADeviceID
-    New-Datastore -VMhost $vmhost -Name $volume.Name -Path $canonicalname -Vmfs -FileSystemVersion 5
+    New-Datastore -VMhost $vmhost -Name $volume.Name -Path $canonicalname -FileSystemVersion 6
 }
 Write-Host "Creating the new datastores on ESXi host $($vmhost.Name) Complete"
 
