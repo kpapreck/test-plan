@@ -249,9 +249,10 @@ $vmhosts | Get-VMhostStorage -RescanAllHba
 
 Write-Host "Creating the new datastores on ESXi host $($vmhost.Name)"
 
+#Replace FileSystemVersion to 6 for VMware 6.5, for 6.0, use 5
 foreach($volume in $volumes){
     $canonicalname = "naa." + $volume.ScsiNAADeviceID
-    New-Datastore -VMhost $vmhost -Name $volume.Name -Path $canonicalname -FileSystemVersion 6
+    New-Datastore -VMhost $vmhost -Name $volume.Name -Path $canonicalname -FileSystemVersion 5
 }
 Write-Host "Creating the new datastores on ESXi host $($vmhost.Name) Complete"
 
