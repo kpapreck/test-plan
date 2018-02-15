@@ -85,6 +85,7 @@ $compressionFactor = "{0:N2}" -f $compressionFactor
 $deDuplicationFactor = "{0:N2}" -f $deDuplicationFactor
 $thinProvisioningFactor = "{0:N2}" -f $thinProvisioningFactor
 $rawSpaceAvailable100TB = "{0:N2}" -f $rawSpaceAvailable100TB
+$effectiveFullCapacityRemaining = "{0:N2}" -f $effectiveFullCapacityRemaining
 
 Write-Host "--------------------------------------------------------------------------------------------------------------"
 Write-Host "SolidFire Cluster: $clusterName"
@@ -108,5 +109,5 @@ Write-Host "Cluster Effective Capacity @ 100% Full with Dedup/Comp: $sumClusterF
 Write-Host "Cluster Effective Capacity @ 100% Full with Dedup/Comp/Thin: $sumClusterFulldct TB"
 Write-Host "Effective Capacity Remaining until 100% Full with Dedup/Comp: $effectiveCapacityRemaining100 TB"
 Write-Host "Effective Capacity Remaining until Error Threshold with Dedup/Comp: $effectiveCapacityRemaining TB"
-
+Write-Host "Effective Capacity Remaining until Error Threshold with Dedup/Comp/Thin: $effectiveFullCapacityRemaining TB"
 Write-Host "--------------------------------------------------------------------------------------------------------------"
