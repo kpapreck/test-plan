@@ -1,4 +1,4 @@
-#script to enter volume name and get the efficiency of that individual volume
+#script to enter volume name and get the used statistics of that individual volume
 
 Write-Host
 $name = Read-Host "Volume Name"
