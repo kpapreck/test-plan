@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: blog-content
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+#  storageClassName: vsphere 
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blog
+  labels:
+    app: blog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blog
+  template:
+    metadata:
+      labels:
+        app: blog
+    spec:
+      volumes:
+      - name: ghost-data
+        persistentVolumeClaim:
+          claimName: blog-content
+      containers:
+      - name: blog
+        image: ghost:2.16-alpine
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 2368
+        volumeMounts:
+          - mountPath: /var/lib/ghost/content
+            name: ghost-data 
+ 
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ghost-svc
+  labels:
+    app: blog
+spec:
+  type: NodePort
+  ports:
+  - port: 2368
+#    nodePort: 30010
+    protocol: TCP
+  selector:
+    app: blog
+
