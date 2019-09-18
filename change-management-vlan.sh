@@ -1,4 +1,5 @@
 #!/bin/bash
+#Script to take HCIoW base management VLAN ID of 2541 to a customer defined VLAN
 echo "Enter Management VLAN"
 read mvlan
 
