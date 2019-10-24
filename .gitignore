@@ -1,5 +1,5 @@
 /dev/*
-cred
+cred.ps1
 dockerfile-kp
 PowerCLI_Core.zip
 dockerfile-build-kp.sh
