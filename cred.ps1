@@ -1,5 +1,0 @@
-$cred = "netappHCI123!"
-$vcenterip = "10.26.69.244"
-$hci = "10.26.69.178"
-$hciuser = "admin"
-$vuser = "administrator@vsphere.local"
