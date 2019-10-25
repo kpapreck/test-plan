@@ -19,12 +19,6 @@ OVERVIEW
 ##################
 #setup connections
 ##################
-#$hci = "mvip"
-#$hciuser = "admin"
-#$cred = "password"
-#$vcenterip = "vcenterIP"
-#$vuser = "administrator@vsphere.local"
-
 Connect-SFCluster -Target $hci -UserName $hciuser -Password $cred
 Connect-VIServer -Server $vcenterip -User $vuser -Password $cred
 
@@ -97,7 +91,8 @@ foreach ($number in $volaccessgroups){Add-SFVolumeToVolumeAccessGroup -VolumeID 
 Get-VMhost | Get-VMhostStorage -RescanAllHba -RescanVMFs 
 
 #setup esxlci
-$vmhost = Get-VMhost | Select -First 1
+#$vmhost = Get-VMhost | Select -First 1
+$vmhost = "10.26.69.172"
 $esxcli = Get-EsxCLi -VMhost $vmhost
 
 #list snapshots to find the cloned volume
