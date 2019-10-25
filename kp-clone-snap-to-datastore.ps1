@@ -1,5 +1,13 @@
+
+#KEVIN PAPRECK - UNOFFICIAL SCRIPT FOR CLONING A DATASTORE AND PRESENTING IT BACK TO VMWARE
+#       ====================================================================
+#       Disclaimer: This script is written as best effort and provides no
+#       warranty expressed or implied. Please contact the author(s) if you
+#       have questions about this script before running or modifying
+#       ====================================================================
+
 <##############################################################################
-Script to clone a datastore and present it back to vmware
+OVERVIEW
 1. Initiates connections to element and vmware
 2. Asks user for the volume name of the datastore it will clone
 3. Lists snapshots associated to the volume
