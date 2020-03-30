@@ -13,7 +13,7 @@ OVERVIEW
 3. Lists snapshots associated to the volume
 4. Asks for user input of the snapshot to use for the clone
 5. Creates clone of the snapshot
-6. presents clone to vmware and resignatures it as a datastore to recover vms
+6. Presents clone to vmware and resignatures it as a datastore to recover vms
 ################################################################################>
 
 ##################
@@ -24,9 +24,10 @@ OVERVIEW
 #$cred = "password"
 #$vcenterip = "vcenterIP"
 #$vuser = "administrator@vsphere.local"
-
+ 
+# remove Force:$true if you want to validate vSphere certificate
 Connect-SFCluster -Target $hci -UserName $hciuser -Password $cred
-Connect-VIServer -Server $vcenterip -User $vuser -Password $cred
+Connect-VIServer -Server $vcenterip -Force:$true -User $vuser -Password $cred
 
 #######################################
 #grab datastore volume and snapshotinfo
