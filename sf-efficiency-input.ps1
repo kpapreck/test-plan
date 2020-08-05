@@ -1,4 +1,4 @@
-#KEVIN PAPRECK - UNOFFICIAL SCRIPT FOR CALCULATING SOLIDFIRE EFFICIENCIES
+#UNOFFICIAL SCRIPT FOR CALCULATING SOLIDFIRE EFFICIENCIES
 
 #       ====================================================================
 #       Disclaimer: This script is written as best effort and provides no
