@@ -1,5 +1,5 @@
 
-#KEVIN PAPRECK - UNOFFICIAL SCRIPT FOR CLONING A DATASTORE AND PRESENTING IT BACK TO VMWARE
+#UNOFFICIAL SCRIPT FOR CLONING A DATASTORE AND PRESENTING IT BACK TO VMWARE
 #       ====================================================================
 #       Disclaimer: This script is written as best effort and provides no
 #       warranty expressed or implied. Please contact the author(s) if you
