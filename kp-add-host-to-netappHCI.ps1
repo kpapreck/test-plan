@@ -43,9 +43,12 @@ $vmotion = "NetApp HCI VDS 01-vMotion"
 $iscsiSubnet = "255.255.255.0"
 $vmotionSubnet = "255.255.255.0"
 $mgmt_portgroup = "Management Network 89"
+
+#uncomment the next line to use the default NetApp HCI management network
+#$mgmt_portgroup = "NetApp HCI VDS 01-Management Network"
+
 # VM host properties
-$esxihost = "winf-evo3-blade4.ntaplab.com"
-$vmhost = $esxihost
+$vmhost = "winf-evo3-blade4.ntaplab.com"
 $esxihostuser = "root"
 $esxihostpassword = "NetApp123!"
 
@@ -63,8 +66,9 @@ Write-Host -ForegroundColor Blue "  These hosts will then be added to the follow
 Write-Host -ForegroundColor Red "Step 1,2 and 3 are expected to be run sequentially. If you have already completed step 1 or step 2, you can start with step 3"
 Write-Host -ForegroundColor Green "What would you like to do?"
 Write-Host -ForegroundColor Green "1: Create new cluster named $newcluster in datacenter $location"
-Write-Host -ForegroundColor Green "2: Add $esxihost to $newcluster"
-Write-Host -ForegroundColor Green "3: Configure $esxihost networking to integrate into $hcivds"
+Write-Host -ForegroundColor Green "2: Add $vmhost to $newcluster"
+Write-Host -ForegroundColor Green "3: Configure $vmhost networking to integrate into $hcivds"
+Write-Host -ForegroundColor Green "4: Re-scan all adapters on hosts in $newcluster to display the portbinding information"
 Write-Host -ForegroundColor Green "0: Exit"
 [uint16]$Choice=Read-Host "Select the operation you would like to perform [0]"
 switch($Choice)
@@ -81,16 +85,16 @@ switch($Choice)
 
   2 {
       # Add Host to vCenter Cluster defined above
-      Write-Host "Adding $esxihost to $newcluster"
+      Write-Host "Adding $vmhost to $newcluster"
       Add-VMhost $vmhost -Location $newcluster -User $esxihostuser -Password $esxihostpassword -Force
 
 
       # List all of the hosts you are adding to the cluster
       #multiple host example: $vmhost_array = @("host1","host2")
       # in order to use multiple host through array will need to change the format of the foreach statement below
-      #$vmhost_array = @($esxihost)
+      #$vmhost_array = @($vmhost)
 
-      $vmhost_array = Get-VMHost $esxihost
+      $vmhost_array = Get-VMHost $vmhost
     }
   
   3 {
@@ -154,11 +158,13 @@ switch($Choice)
           }
           $esxcli.iscsi.networkportal.add.Invoke($iScsi)
           
-          Write-Host "Rescan All HBAs on $newcluster"
-          Get-Cluster -Name $newcluster | Get-VMHost | Get-VMHostStorage -RescanAllHba
-
       }
-   }  
+    }
+  4 {
+      #issue rescan of all HBAs on $newcluster"
+      Write-Host "Rescan All HBAs on $newcluster"
+      Get-Cluster -Name $newcluster | Get-VMHost | Get-VMHostStorage -RescanAllHba
+    } 
   default
     {
       $Choice=0
