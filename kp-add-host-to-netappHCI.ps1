@@ -8,6 +8,19 @@
 
 # 	This code will create a new cluster in a NetApp HCI vCenter, add the host(s) to the cluster and integrate them into the existing NetApp HCI VDS switch
 
+
+###################################################################################################
+##### Connect to vCenter and SolidFire
+###################################################################################################
+$vcred = Get-Credential -Message "Enter vCenter administrator credentials"
+$viserver = Read-Host "Enter vCenter FQDN or IP to initiate connection"
+$vcred | connect-viserver -server $viserver
+
+$scred = Get-Credential -Message "Enter SolidFire administrator credentials"
+$sfconnect = Read-Host "Enter SolidFire MVIP for connection to storage"
+$scred | connect-sfcluster -target $sfconnect
+
+
 ###################################################################################################
 ##### Variables used in script
 ###################################################################################################
@@ -25,7 +38,6 @@
 # iscsiA/iscsiB/vmotion = vmk port group names from existing VDS to integrate into the new host
 # iscsiSubnet = subnet used for iscsiA/iscsiB
 # vmotionSubnet = subnet used for vmotion
-# esxihostuser/esxihostpassword are used for the esxi host credentials. These can be moved to a cred file later
 
 
 # VMware Cluster Information
@@ -52,18 +64,17 @@ $vmotionSubnet_var = "255.255.255.0"
 $mgmt_portgroup_var = "Management Network 89"
 
 #uncomment the next line to use the default NetApp HCI management network
-#$mgmt_portgroup_var = "NetApp HCI VDS 01-Management Network"
+#$mgmt_portgroup_var = "NetApp HCI VDS 01-Management_Network"
 
 # VM host properties
 $vmhost = "winf-evo3-blade4.ntaplab.com"
-$esxihostuser = "root"
-$esxihostpassword = "NetApp123!"
 
 # vCenter
 $vcenter = $global:DefaultVIServers[0].name
 
 # SolidFire connection to add ESXi host(s) into:
 $sf = Get-SFClusterInfo | select Name -ExpandProperty Name
+
 
 Write-Host -ForegroundColor Blue "==============================================================================================================================="
 Write-Host -ForegroundColor Blue "Before starting have you verified all of the variables are correct?"
@@ -85,7 +96,8 @@ Write-Host -ForegroundColor Green "What would you like to do?"
 Write-Host -ForegroundColor Green "1: Create new cluster named [$newcluster] in datacenter [$location]"
 Write-Host -ForegroundColor Green "2: Add ESXi host to $newcluster and configure host networking to integrate into [$hcivds]"
 Write-Host -ForegroundColor Green "3: Setup SolidFire connections to [$newcluster] and add additional datastores on SolidFire [$sf]"
-Write-Host -ForegroundColor Green "4: Custom - to resume steps copy/paste into 4 from where you left off"
+Write-Host -ForegroundColor Green "4: Custom - Restart at iSCSI setup if any information was entered incorrectly"
+Write-Host -ForegroundColor Green "5: Custom - Enter code where you needed to quit if you need to restart at any process"
 Write-Host -ForegroundColor Green "0: Exit"
 [uint16]$Choice=Read-Host "Select the operation you would like to perform [0]"
 switch($Choice)
@@ -116,7 +128,6 @@ switch($Choice)
       # Add Host to vCenter Cluster defined above
       Write-Host -ForegroundColor Blue "Adding $vmhost to $newcluster"
       $rcred = Get-Credential -Message "Enter credentials using user [root] and its password"
-      #Add-VMhost $vmhost -Location $newcluster -User $esxihostuser -Password $esxihostpassword -Force
       Add-VMhost $vmhost -Location $newcluster -Credential $rcred -Force
 
       #verify that the host has been added to $mycluster      
@@ -160,20 +171,15 @@ switch($Choice)
 	  Write-Host -ForegroundColor Blue "Adding [$vmhost] to [$hcivds]"
 	  $vds | Add-VDSwitchVMHost -VMHost $vmhost | Out-Null
 	  Write-Host -ForegroundColor Blue "Adding [$nic2] from [$vmhost] to [$hcivds]"
-           Read-Host "continue0"
 	  $Phnic = $vmhost |Get-VMHostNetworkAdapter -Physical -Name $nic2
-           Read-Host "continue01"
           Add-VDSwitchPhysicalNetworkAdapter -DistributedSwitch $vds -VMHostPhysicalNic $Phnic -Confirm:$false
 
           #Migrate VMkernel interfaces to VDS
 
           # Management #
           Write-Host -ForegroundColor Blue "Migrating management to [$mgmt_portgroup] on [$hcivds]"
-          Read-Host "continue1?"
           $dvportgroup = Get-VDPortgroup -name $mgmt_portgroup -VDSwitch $vds
-          Read-Host "continue2?"
           $vmk = Get-VMHostNetworkAdapter -Name vmk0 -VMHost $vmhost
-           Read-Host "continue3?"
           Set-VMHostNetworkAdapter -PortGroup $dvportgroup -VirtualNic $vmk -confirm:$false | Out-Null
 
           Write-Host  -ForegroundColor Blue "Removing vnic0 from vSwitch0"
@@ -256,6 +262,7 @@ switch($Choice)
       ###################################################################################################
       ##### Custom Section if needed to start/stop at a specific spot. Copy code into #4
       ###################################################################################################
+      $vmhost = Read-Host "Enter FQDN or IP of ESXi host to add to $newcluster"
       Write-Host -ForegroundColor Blue "Adding [$iscsiA] Port Group"
           $iscsiSubnet = Read-Host "Enter new value for iSCSI subnet if incorrect [$iscsiSubnet_var]"
             if([string]::IsNullOrWhiteSpace($iscsiSubnet))

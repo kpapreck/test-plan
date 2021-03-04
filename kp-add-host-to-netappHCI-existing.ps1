@@ -52,7 +52,7 @@ $vmotionSubnet_var = "255.255.255.0"
 #$mgmt_portgroup_var = "Management Network 89"
 
 #uncomment the next line to use the default NetApp HCI management network
-$mgmt_portgroup_var = "NetApp HCI VDS 01-Management Network"
+$mgmt_portgroup_var = "NetApp HCI VDS 01-Management_Network"
 
 # VM host properties
 #$vmhost = "winf-evo3-blade4.ntaplab.com"
@@ -160,20 +160,15 @@ switch($Choice)
 	  Write-Host -ForegroundColor Blue "Adding [$vmhost] to [$hcivds]"
 	  $vds | Add-VDSwitchVMHost -VMHost $vmhost | Out-Null
 	  Write-Host -ForegroundColor Blue "Adding [$nic2] from [$vmhost] to [$hcivds]"
-           Read-Host "continue0"
 	  $Phnic = $vmhost |Get-VMHostNetworkAdapter -Physical -Name $nic2
-           Read-Host "continue01"
           Add-VDSwitchPhysicalNetworkAdapter -DistributedSwitch $vds -VMHostPhysicalNic $Phnic -Confirm:$false
 
           #Migrate VMkernel interfaces to VDS
 
           # Management #
           Write-Host -ForegroundColor Blue "Migrating management to [$mgmt_portgroup] on [$hcivds]"
-          Read-Host "continue1?"
           $dvportgroup = Get-VDPortgroup -name $mgmt_portgroup -VDSwitch $vds
-          Read-Host "continue2?"
           $vmk = Get-VMHostNetworkAdapter -Name vmk0 -VMHost $vmhost
-           Read-Host "continue3?"
           Set-VMHostNetworkAdapter -PortGroup $dvportgroup -VirtualNic $vmk -confirm:$false | Out-Null
 
           Write-Host  -ForegroundColor Blue "Removing vnic0 from vSwitch0"
