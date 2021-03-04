@@ -49,15 +49,15 @@ $iscsiB = "NetApp HCI VDS 01-iSCSI-B"
 $vmotion = "NetApp HCI VDS 01-vMotion"
 $iscsiSubnet_var = "255.255.255.0"
 $vmotionSubnet_var = "255.255.255.0"
-$mgmt_portgroup_var = "Management Network 89"
+#$mgmt_portgroup_var = "Management Network 89"
 
 #uncomment the next line to use the default NetApp HCI management network
-#$mgmt_portgroup_var = "NetApp HCI VDS 01-Management Network"
+$mgmt_portgroup_var = "NetApp HCI VDS 01-Management Network"
 
 # VM host properties
-$vmhost = "winf-evo3-blade4.ntaplab.com"
-$esxihostuser = "root"
-$esxihostpassword = "NetApp123!"
+#$vmhost = "winf-evo3-blade4.ntaplab.com"
+#$esxihostuser = "root"
+#$esxihostpassword = "NetApp123!"
 
 # vCenter
 $vcenter = $global:DefaultVIServers[0].name
