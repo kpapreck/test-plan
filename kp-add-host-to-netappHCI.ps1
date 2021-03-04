@@ -52,57 +52,67 @@ $vmhost = "winf-evo3-blade4.ntaplab.com"
 $esxihostuser = "root"
 $esxihostpassword = "NetApp123!"
 
-# fetch NetApp HCI VDS 01 information
-#$vds = Get-VDSwitch -Name $hcivds
+
+Write-Host -ForegroundColor Blue "============================================================================================"
+Write-Host -ForegroundColor Blue "Before starting have you verified all of the variables are correct?"
+Write-Host -ForegroundColor Blue "  Cluster to add to NetApp HCI vCenter will be $newcluster in Datacenter $location"
+Write-Host -ForegroundColor Blue "  ESXi host $esxi host will add $nic1 and $nic2 for a 2-cable setup"
+Write-Host -ForegroundColor Blue "  This host will be added to: $hcivds and will add the following port groups"
+Write-Host -ForegroundColor Blue "    vmk0: $mgmt_portgroup"
+Write-Host -ForegroundColor Blue "    vmk1: $iscsiA"
+Write-Host -ForegroundColor Blue "    vmk2: $iscsiB"
+Write-Host -ForegroundColor Blue "    vmk3: $vmotion"
+Write-Host -ForegroundColor Blue "============================================================================================"
 
 [uint16]$Choice=1
 While ($Choice -ne 0)
 {
-Write-Host -ForegroundColor Blue "Before starting have you verified all of the variables are correct?"
-Write-Host -ForegroundColor Blue "  Cluster to add to NetApp HCI vCenter will be $newcluster in Datacenter $location"
-Write-Host -ForegroundColor Blue "  ESXi host $esxi host will add $nic1 and $nic2 for a 2-cable setup"
-Write-Host -ForegroundColor Blue "  These hosts will then be added to the following VDS switch: $hcivds and will add the following port groups Management, $iscsiA, $iscsiB, $vmotion"
-
 Write-Host -ForegroundColor Red "Step 1,2 and 3 are expected to be run sequentially. If you have already completed step 1 or step 2, you can start with step 3"
 Write-Host -ForegroundColor Green "What would you like to do?"
 Write-Host -ForegroundColor Green "1: Create new cluster named $newcluster in datacenter $location"
-Write-Host -ForegroundColor Green "2: Add $vmhost to $newcluster"
-Write-Host -ForegroundColor Green "3: Configure $vmhost networking to integrate into $hcivds"
-Write-Host -ForegroundColor Green "4: Re-scan all adapters on hosts in $newcluster to display the portbinding information"
+Write-Host -ForegroundColor Green "2: Add ESXi host to $newcluster and configure host networking to integrate into $hcivds"
+Write-Host -ForegroundColor Green "3: Setup SolidFire connections to $newcluster and add additional datastores on SolidFire"
 Write-Host -ForegroundColor Green "0: Exit"
 [uint16]$Choice=Read-Host "Select the operation you would like to perform [0]"
 switch($Choice)
 {
    1 {
       # Create new vCenter Cluster
-      Write-Host "Adding $newcluster to vCenter"
-      #New-Cluster -Name $newcluster -Location $location
+      Write-Host -ForegroundColor Blue "Adding $newcluster to vCenter"
 
-      #example with HA and DRS
-      #netapp HCI defaults are HAEnabled, AdmissionControlEnabled, HAfailoverlevel2 swap withVM, DRS fullyautomated, Default VM restart Medium,, isolation disabled
+      #matching NetApp HCI defaults: 
+      #  HAEnabled, AddmissionControlEnabled, HAfailoverlevel2, 
+      #  swap withVM, DRS fullyautomated, Default VM restart Medium,, isolation disabled
+      
       New-Cluster -Name $newcluster -Location $location -HAEnabled -HAAdmissionControlEnabled -HAFailoverLevel 2 -VMSwapfilepolicy "withVM" -HARestartPriority "Medium" -HAIsolationResponse "DoNothing" -DRSEnabled -DRSAutomationLevel "FullyAutomated"
      }
 
   2 {
+      $vmhost = Read-Host "Enter FQDN or IP of ESXi host to add to $newcluster"
       # Add Host to vCenter Cluster defined above
-      Write-Host "Adding $vmhost to $newcluster"
+      Write-Host -ForegroundColor Blue "Adding $vmhost to $newcluster"
       Add-VMhost $vmhost -Location $newcluster -User $esxihostuser -Password $esxihostpassword -Force
 
-
+      #verify that the host has been added to $mycluster      
+      $verify = Get-VMHost $vmhost | select connectionstate  -expandproperty ConnectionState
+      If ($verify -ne "Connected"){
+        Write-Host -ForegroundColor Blue "Host is not connected. Stopping script"
+        break
+      }
+ 
       # List all of the hosts you are adding to the cluster
       #multiple host example: $vmhost_array = @("host1","host2")
       # in order to use multiple host through array will need to change the format of the foreach statement below
       #$vmhost_array = @($vmhost)
 
       $vmhost_array = Get-VMHost $vmhost
-    }
-  
-  3 {
+      
+      Write-Host -ForegroundColor Blue "$vmhost has been added to $mycluster. Starting network configuration and migration from VSS to VDS"
       #Add host and configure into NetApp HCI VDS
         foreach ($vmhost in $vmhost_array) {
-	  Write-Host "Adding $vmhost to $hcivds"
+	  Write-Host -ForegroundColor Blue "Adding $vmhost to $hcivds"
 	  $vds | Add-VDSwitchVMHost -VMHost $vmhost | Out-Null
-	  Write-Host "Adding $nic2 from $vmhost to $hcivds"
+	  Write-Host -ForegroundColor Blue "Adding $nic2 from $vmhost to $hcivds"
 
 	  $Phnic = $vmhost |Get-VMHostNetworkAdapter -Physical -Name $nic2
           Add-VDSwitchPhysicalNetworkAdapter -DistributedSwitch $vds -VMHostPhysicalNic $Phnic -Confirm:$false
@@ -111,38 +121,38 @@ switch($Choice)
 
           # Management #
           #$mgmt_portgroup = "Management Network"
-          Write-Host "Migrating $mgmt_portgroup to $hcivds"
+          Write-Host -ForegroundColor Blue "Migrating $mgmt_portgroup to $hcivds"
           $dvportgroup = Get-VDPortgroup -name $mgmt_portgroup -VDSwitch $vds
           $vmk = Get-VMHostNetworkAdapter -Name vmk0 -VMHost $vmhost
           Set-VMHostNetworkAdapter -PortGroup $dvportgroup -VirtualNic $vmk -confirm:$false | Out-Null
 
-          Write-Host  -Object 'Removing vnic0 from vswitch'
+          Write-Host  -ForegroundColor Blue "Removing vnic0 from vSwitch0"
           $vmhost |Get-VMHostNetworkAdapter -Name $nic1 |Remove-VirtualSwitchPhysicalNetworkAdapter -Confirm:$false
           $Phnic = $vmhost |Get-VMHostNetworkAdapter -Physical -Name $nic1
           Add-VDSwitchPhysicalNetworkAdapter -DistributedSwitch $vds -VMHostPhysicalNic $Phnic -Confirm:$false
 
-          Write-Host "Adding $iscsiA Port Group"
+          Write-Host -ForegroundColor Blue "Adding $iscsiA Port Group"
           $ip1 = Read-Host "Enter iSCSI-A IP for $vmhost"
           New-VMHostNetworkAdapter -VMHost $vmhost -PortGroup $iscsiA -virtualSwitch $hcivds -IP $ip1 -SubnetMask $iscsiSubnet -Mtu 9000 
 
-          Write-Host "Adding $iscsiB Port Group"
+          Write-Host -ForegroundColor Blue "Adding $iscsiB Port Group"
           $ip2 = Read-Host "Enter iSCSI-B IP for $vmhost"
           New-VMHostNetworkAdapter -VMHost $vmhost -PortGroup $iscsiB -virtualSwitch $hcivds -IP $ip2 -SubnetMask $iscsiSubnet -Mtu 9000
 
-          Write-Host "Adding $vmotion Port Group"
+          Write-Host -ForegroundColor Blue "Adding $vmotion Port Group"
           $ip3 = Read-Host "Enter vMotion IP for $vmhost"
           New-VMHostNetworkAdapter -VMHost $vmhost -PortGroup $vmotion -virtualSwitch $hcivds -IP $ip3 -SubnetMask $vmotionSubnet -Mtu 9000 -VMotionEnabled $true
 
-          Write-Host "Removing vSwitch0 from $vmhost"
+          Write-Host -ForegroundColor Blue "Removing vSwitch0 from $vmhost"
           Remove-VirtualSwitch -VirtualSwitch "vSwitch0" -Confirm:$false
 
-          Write-Host "Enable iSCSI on $vmhost"
+          Write-Host -ForegroundColor Blue "Enable iSCSI on $vmhost"
           Get-VMHostStorage -VMHost $vmhost | Set-VMHostStorage -SoftwareIScsiEnabled $true
       
           # Bind NICs to HBA
-          Write-Host "Bind vmk1 and vmk2 to iSCSI Initiator"
+          Write-Host -ForegroundColor Blue "Bind vmk1 and vmk2 to iSCSI Initiator"
           $HBANumber = Get-VMHostHba -VMHost $vmhost -Type iSCSI    | %{$_.Device}
-          Write-Host "Bind Port NIC to iSCSI <$vmhost> <$HBANumber>" -ForegroundColor Green
+          Write-Host -ForegroundColor Blue "Bind Port NIC to iSCSI <$vmhost> <$HBANumber>"
           $esxcli = Get-EsxCli -V2 -VMhost $vmhost
           $esxcli.iscsi.networkportal.add.CreateArgs()
           $iScsi = @{
@@ -160,10 +170,23 @@ switch($Choice)
           
       }
     }
-  4 {
-      #issue rescan of all HBAs on $newcluster"
-      Write-Host "Rescan All HBAs on $newcluster"
-      Get-Cluster -Name $newcluster | Get-VMHost | Get-VMHostStorage -RescanAllHba
+  3 {
+      #Setup connections for the new host to NetApp SolidFire"
+      Write-Host -ForegroundColor Blue "Items included in this section includes:"
+      Write-Host -ForegroundColor Blue "  Creating new account called $newcluster"
+      Write-Host -ForegroundColor Blue "  Creating # of volumes of X amount of size and specified QoS settings on SolidFire"
+      Write-Host -ForegroundColor Blue "  Adding these volumes to NetApp-HCI acesss group (or a different one if changed)"
+      Write-Host -ForegroundColor Blue "  Adding SolidFire SVIP to ESXi host(s) that reside within $newcluster"
+      Write-Host -ForegroundColor Blue "  Creating VMware datastores on ESXi hosts based on the volumes created"
+      Write-Host -ForegroundColor Blue "  Rescanning adapters to complete the setup"
+      $continue = Read-Host "Do you want to continue with integrating these ESXi hosts with SolidFire?[y/n]"
+      If ($continue -eq "y"){ 
+        #This assumes that New-TenantOrCluster-NetAppHCI.ps1 resides in the same directory as this script
+        #This script also assumes an active session to both vCenter and SolidFire
+
+        . ./New-TenantOrCluster-NetAppHCI.ps1
+        New-TenantOrCluster -Cluster $newcluster
+      }
     } 
   default
     {
