@@ -39,8 +39,8 @@ $vds = Get-VDSwitch -Name $hcivds
 # Host network properties
 # need to fetch vmnic numbers from DCUI under Network Adapters
 
-$nic1var = "vmnic0"
-$nic2var = "vmnic1"
+$nic1var = "vmnic1"
+$nic2var = "vmnic5"
 $uplink1 = "Uplink 1"
 $uplink2 = "Uplink 2"
 $switch = "vSwitch0"
