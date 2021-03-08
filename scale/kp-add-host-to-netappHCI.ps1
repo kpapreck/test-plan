@@ -10,21 +10,9 @@
 
 
 ###################################################################################################
-##### Connect to vCenter and SolidFire
-###################################################################################################
-$vcred = Get-Credential -Message "Enter vCenter administrator credentials"
-$viserver = Read-Host "Enter vCenter FQDN or IP to initiate connection"
-$vcred | connect-viserver -server $viserver
-
-$scred = Get-Credential -Message "Enter SolidFire administrator credentials"
-$sfconnect = Read-Host "Enter SolidFire MVIP for connection to storage"
-$scred | connect-sfcluster -target $sfconnect
-
-
-###################################################################################################
 ##### Variables used in script
 ###################################################################################################
-
+. ./scale-vars.ps1
 #This assumes that New-TenantOrCluster-NetAppHCI.ps1 resides in the same directory as this script
 #This script also assumes an active session to both vCenter and SolidFire
 
@@ -41,59 +29,75 @@ $scred | connect-sfcluster -target $sfconnect
 
 
 # VMware Cluster Information
-$newcluster = "mycluster"
-$location = "NetApp-HCI-Datacenter-01"
+#$newcluster = "mycluster"
+#$location = "NetApp-HCI-Datacenter-01"
 
 # Existing VDS information
-$hcivds = "NetApp HCI VDS 01"
-$vds = Get-VDSwitch -Name $hcivds
+#$hcivds = "NetApp HCI VDS 01"
 
 # Host network properties
 # need to fetch vmnic numbers from DCUI under Network Adapters
 
-$nic1var = "vmnic0"
-$nic2var = "vmnic1"
-$uplink1 = "Uplink 1"
-$uplink2 = "Uplink 2"
-$switch = "vSwitch0"
-$iscsiA = "NetApp HCI VDS 01-iSCSI-A"
-$iscsiB = "NetApp HCI VDS 01-iSCSI-B"
-$vmotion = "NetApp HCI VDS 01-vMotion"
-$iscsiSubnet_var = "255.255.255.0"
-$vmotionSubnet_var = "255.255.255.0"
-$mgmt_portgroup_var = "Management Network 89"
+#$nic1var = "vmnic0"
+#$nic2var = "vmnic1"
+#$uplink1 = "Uplink 1"
+#$uplink2 = "Uplink 2"
+#$switch = "vSwitch0"
+#$iscsiA = "NetApp HCI VDS 01-iSCSI-A"
+#$iscsiB = "NetApp HCI VDS 01-iSCSI-B"
+#$vmotion = "NetApp HCI VDS 01-vMotion"
+#$iscsiSubnet_var = "255.255.255.0"
+#$vmotionSubnet_var = "255.255.255.0"
+#$mgmt_portgroup_var = "Management Network 89"
 
 #uncomment the next line to use the default NetApp HCI management network
 #$mgmt_portgroup_var = "NetApp HCI VDS 01-Management_Network"
 
-# VM host properties
-$vmhost = "winf-evo3-blade4.ntaplab.com"
-
 # vCenter
-$vcenter = $global:DefaultVIServers[0].name
+#$vcenter = $global:DefaultVIServers[0].name
+
+###################################################################################################
+##### Connect to vCenter and SolidFire
+###################################################################################################
+
+#$viserver = Read-Host "Enter vCenter FQDN or IP to initiate connection"
+$vcred = Get-Credential -Message "Enter vCenter administrator credentials for [$viserver]"
+$vcred | connect-viserver -server $viserver
+
+#$sfconnect = Read-Host "Enter SolidFire MVIP for connection to storage"
+$scred = Get-Credential -Message "Enter SolidFire administrator credentials for [$sfconnect]"
+$scred | connect-sfcluster -target $sfconnect
+
 
 # SolidFire connection to add ESXi host(s) into:
 $sf = Get-SFClusterInfo | select Name -ExpandProperty Name
 
+# grab VDS info
+$vds = Get-VDSwitch -Name $hcivds
 
 Write-Host -ForegroundColor Blue "==============================================================================================================================="
 Write-Host -ForegroundColor Blue "Before starting have you verified all of the variables are correct?"
-Write-Host -ForegroundColor Blue "  Cluster to add to NetApp HCI vCenter [$vcenter] will be [$newcluster] in Datacenter [$location]"
+Write-Host -ForegroundColor Blue "  Cluster to add to NetApp HCI vCenter [$viserver] will be [$newcluster] in Datacenter [$location]"
 Write-Host -ForegroundColor Blue "  ESXi host(s) host will be configured with 2 x 10/25G links for a 2-cable setup"
+Write-Host -ForegroundColor Blue "    Physical 10/25G connections to add will have all three required VLANs and will use: [$nic1var] and [$nic2var]"
+Write-Host -ForegroundColor Blue "    These ports will be added using the following uplinks: [$uplink1] and [$uplink2] migrating from the default vSS [$switch]"
 Write-Host -ForegroundColor Blue "  ESXi host(s) will be added to: [$hcivds] and will add the following port groups:"
 Write-Host -ForegroundColor Blue "    vmk0: [$mgmt_portgroup_var]"
 Write-Host -ForegroundColor Blue "    vmk1: [$iscsiA]"
 Write-Host -ForegroundColor Blue "    vmk2: [$iscsiB]"
 Write-Host -ForegroundColor Blue "    vmk3: [$vmotion]"
 Write-Host -ForegroundColor Blue "  The ESXi hosts within [$newcluster] will then setup connections and integrate into NetApp SolidFire [$sf]"
+Write-Host -ForegroundColor Blue "If any of this is incorrect, exit and edit scale-vars.ps1 file"
 Write-Host -ForegroundColor Blue "==============================================================================================================================="
+
+
 
 [uint16]$Choice=1
 While ($Choice -ne 0)
 {
 Write-Host -ForegroundColor Red "Step 1,2 and 3 are expected to be run sequentially. If you have already completed step 1 or step 2, you can start with step 3"
 Write-Host -ForegroundColor Green "What would you like to do?"
-Write-Host -ForegroundColor Green "1: Create new cluster named [$newcluster] in datacenter [$location]"
+Write-Host -ForegroundColor Green "1: Create new cluster named [$newcluster] in datacenter [$location] within vCenter [$viserver]"
 Write-Host -ForegroundColor Green "2: Add ESXi host to $newcluster and configure host networking to integrate into [$hcivds]"
 Write-Host -ForegroundColor Green "3: Setup SolidFire connections to [$newcluster] and add additional datastores on SolidFire [$sf]"
 Write-Host -ForegroundColor Green "4: Custom - Restart at iSCSI setup if any information was entered incorrectly"
@@ -123,8 +127,13 @@ switch($Choice)
       ###################################################################################################
 
       #### Start of adding host section ####
-
-      $vmhost = Read-Host "Enter FQDN or IP of ESXi host to add to $newcluster"
+      $vmhost = Read-Host "Enter FQDN or IP of ESXi host to add to $newcluster if different from [$s_vmhost]"
+         if([string]::IsNullOrWhiteSpace($vmhost))
+          {
+            $vmhost=$s_vmhost
+          }
+      
+      
       # Add Host to vCenter Cluster defined above
       Write-Host -ForegroundColor Blue "Adding $vmhost to $newcluster"
       $rcred = Get-Credential -Message "Enter credentials using user [root] and its password"
@@ -193,11 +202,23 @@ switch($Choice)
               {
                 $iscsiSubnet=$iscsiSubnet_var
               }
-          $ip1 = Read-Host "Enter iSCSI-A IP for $vmhost"
+
+
+          $ip1 = Read-Host "Enter iSCSI-A IP for $vmhost if different from [$s_ip1]"
+            if([string]::IsNullOrWhiteSpace($ip1))
+              {
+                $ip1=$s_ip1
+              }
+
           New-VMHostNetworkAdapter -VMHost $vmhost -PortGroup $iscsiA -virtualSwitch $hcivds -IP $ip1 -SubnetMask $iscsiSubnet -Mtu 9000 
 
           Write-Host -ForegroundColor Blue "Adding [$iscsiB] Port Group"
-          $ip2 = Read-Host "Enter iSCSI-B IP for $vmhost"
+          $ip2 = Read-Host "Enter iSCSI-B IP for $vmhost if different from [$s_ip2]"
+            if([string]::IsNullOrWhiteSpace($ip2))
+              {
+                $ip2=$s_ip2
+              }
+
           New-VMHostNetworkAdapter -VMHost $vmhost -PortGroup $iscsiB -virtualSwitch $hcivds -IP $ip2 -SubnetMask $iscsiSubnet -Mtu 9000
 
           Write-Host -ForegroundColor Blue "Adding [$vmotion] Port Group"
@@ -206,7 +227,12 @@ switch($Choice)
               {
                 $vmotionSubnet=$vmotionSubnet_var
               }
-          $ip3 = Read-Host "Enter vMotion IP for $vmhost"
+          $ip3 = Read-Host "Enter vMotion IP for $vmhost if different from [$s_ip3]"
+            if([string]::IsNullOrWhiteSpace($ip3))
+              {
+                $ip3=$s_ip3
+              }
+
           New-VMHostNetworkAdapter -VMHost $vmhost -PortGroup $vmotion -virtualSwitch $hcivds -IP $ip3 -SubnetMask $vmotionSubnet -Mtu 9000 -VMotionEnabled $true
 
           Write-Host -ForegroundColor Blue "Removing vSwitch0 from [$vmhost]"
@@ -253,9 +279,14 @@ switch($Choice)
       If ($continue -eq "y"){ 
         #This assumes that New-TenantOrCluster-NetAppHCI.ps1 resides in the same directory as this script
         #This script also assumes an active session to both vCenter and SolidFire
-
+        Write-Host -ForegroundColor Blue "Datastores to add: [$qtyvol] of size [$sizeGB] using QoS Min [$min], Max [$max] and Burst [$burst] IOPs"
+	$change = Read-Host "Would you like to manually change any of these values, y/n [n]" 
         . ./New-TenantOrCluster-NetAppHCI.ps1
-        New-TenantOrCluster -Cluster $newcluster
+        If ($change -eq "y") {
+          New-TenantOrCluster -Cluster $newcluster
+        }
+        else {
+          New-TenantOrCluster -Cluster $newcluster -qtyvol $qtyvol -sizeGB $sizeGB -min $min -max $max -burst $burst
       }
     }
   4 {
@@ -303,9 +334,9 @@ switch($Choice)
           }
           $esxcli.iscsi.networkportal.add.Invoke($iScsi)
           $iScsi = @{
-          force = $false
-          nic = "vmk2"
-          adapter = $HBANumber
+            force = $false
+            nic = "vmk2"
+            adapter = $HBANumber
           }
           $esxcli.iscsi.networkportal.add.Invoke($iScsi)
 
