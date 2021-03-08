@@ -100,7 +100,7 @@ Write-Host -ForegroundColor Green "What would you like to do?"
 Write-Host -ForegroundColor Green "1: Create new cluster named [$newcluster] in datacenter [$location] within vCenter [$viserver]"
 Write-Host -ForegroundColor Green "2: Add ESXi host to $newcluster and configure host networking to integrate into [$hcivds]"
 Write-Host -ForegroundColor Green "3: Setup SolidFire connections to [$newcluster] and add additional datastores on SolidFire [$sf]"
-Write-Host -ForegroundColor Green "4: Custom - Restart at iSCSI setup if any information was entered incorrectly"
+Write-Host -ForegroundColor Green "4: Custom - Enter code where you needed to quit if you need to restart at any process"
 Write-Host -ForegroundColor Green "5: Custom - Enter code where you needed to quit if you need to restart at any process"
 Write-Host -ForegroundColor Green "0: Exit"
 [uint16]$Choice=Read-Host "Select the operation you would like to perform [0]"
@@ -287,59 +287,12 @@ switch($Choice)
         }
         else {
           New-TenantOrCluster -Cluster $newcluster -qtyvol $qtyvol -sizeGB $sizeGB -min $min -max $max -burst $burst
+        }
       }
     }
   4 {
       ###################################################################################################
       ##### Custom Section if needed to start/stop at a specific spot. Copy code into #4
-      ###################################################################################################
-      $vmhost = Read-Host "Enter FQDN or IP of ESXi host to add to $newcluster"
-      Write-Host -ForegroundColor Blue "Adding [$iscsiA] Port Group"
-          $iscsiSubnet = Read-Host "Enter new value for iSCSI subnet if incorrect [$iscsiSubnet_var]"
-            if([string]::IsNullOrWhiteSpace($iscsiSubnet))
-              {
-                $iscsiSubnet=$iscsiSubnet_var
-              }
-          $ip1 = Read-Host "Enter iSCSI-A IP for $vmhost"
-          New-VMHostNetworkAdapter -VMHost $vmhost -PortGroup $iscsiA -virtualSwitch $hcivds -IP $ip1 -SubnetMask $iscsiSubnet -Mtu 9000
-
-          Write-Host -ForegroundColor Blue "Adding [$iscsiB] Port Group"
-          $ip2 = Read-Host "Enter iSCSI-B IP for $vmhost"
-          New-VMHostNetworkAdapter -VMHost $vmhost -PortGroup $iscsiB -virtualSwitch $hcivds -IP $ip2 -SubnetMask $iscsiSubnet -Mtu 9000
-
-          Write-Host -ForegroundColor Blue "Adding [$vmotion] Port Group"
-          $vmotionSubnet = Read-Host "Enter new value for vMotion subnet if incorrect [$vmotionSubnet_var]"
-            if([string]::IsNullOrWhiteSpace($vmotionSubnet))
-              {
-                $vmotionSubnet=$vmotionSubnet_var
-              }
-          $ip3 = Read-Host "Enter vMotion IP for $vmhost"
-          New-VMHostNetworkAdapter -VMHost $vmhost -PortGroup $vmotion -virtualSwitch $hcivds -IP $ip3 -SubnetMask $vmotionSubnet -Mtu 9000 -VMotionEnabled $true
-
-          Write-Host -ForegroundColor Blue "Removing vSwitch0 from [$vmhost]"
-          Remove-VirtualSwitch -VirtualSwitch "vSwitch0" -Confirm:$false
-
-          Write-Host -ForegroundColor Blue "Enable iSCSI on [$vmhost]"
-          Get-VMHostStorage -VMHost $vmhost | Set-VMHostStorage -SoftwareIScsiEnabled $true
-          # Bind NICs to HBA
-          Write-Host -ForegroundColor Blue "Bind vmk1 and vmk2 to iSCSI Initiator"
-          $HBANumber = Get-VMHostHba -VMHost $vmhost -Type iSCSI    | %{$_.Device}
-          Write-Host -ForegroundColor Blue "Bind Port NIC to iSCSI [$vmhost] [$HBANumber]"
-          $esxcli = Get-EsxCli -V2 -VMhost $vmhost
-          $esxcli.iscsi.networkportal.add.CreateArgs()
-          $iScsi = @{
-            force = $false
-            nic = "vmk1"
-            adapter = $HBANumber
-          }
-          $esxcli.iscsi.networkportal.add.Invoke($iScsi)
-          $iScsi = @{
-            force = $false
-            nic = "vmk2"
-            adapter = $HBANumber
-          }
-          $esxcli.iscsi.networkportal.add.Invoke($iScsi)
-
     }
   5 {
      ###################################################################################################
