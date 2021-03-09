@@ -13,8 +13,7 @@
 ##### Variables used in script
 ###################################################################################################
 . ./scale-vars.ps1
-#This assumes that New-TenantOrCluster-NetAppHCI.ps1 resides in the same directory as this script
-#This script also assumes an active session to both vCenter and SolidFire
+#This assumes that scale-vars.ps1 and New-TenantOrCluster-NetAppHCI.ps1 reside in the same directory as this script
 
 ###Description of Variables###
 # newcluster = name of the new cluster being created
@@ -28,52 +27,25 @@
 # vmotionSubnet = subnet used for vmotion
 
 
-# VMware Cluster Information
-#$newcluster = "mycluster"
-#$location = "NetApp-HCI-Datacenter-01"
-
-# Existing VDS information
-#$hcivds = "NetApp HCI VDS 01"
-
-# Host network properties
-# need to fetch vmnic numbers from DCUI under Network Adapters
-
-#$nic1var = "vmnic0"
-#$nic2var = "vmnic1"
-#$uplink1 = "Uplink 1"
-#$uplink2 = "Uplink 2"
-#$switch = "vSwitch0"
-#$iscsiA = "NetApp HCI VDS 01-iSCSI-A"
-#$iscsiB = "NetApp HCI VDS 01-iSCSI-B"
-#$vmotion = "NetApp HCI VDS 01-vMotion"
-#$iscsiSubnet_var = "255.255.255.0"
-#$vmotionSubnet_var = "255.255.255.0"
-#$mgmt_portgroup_var = "Management Network 89"
-
-#uncomment the next line to use the default NetApp HCI management network
-#$mgmt_portgroup_var = "NetApp HCI VDS 01-Management_Network"
-
-# vCenter
-#$vcenter = $global:DefaultVIServers[0].name
 
 ###################################################################################################
 ##### Connect to vCenter and SolidFire
 ###################################################################################################
 
 #$viserver = Read-Host "Enter vCenter FQDN or IP to initiate connection"
-$vcred = Get-Credential -Message "Enter vCenter administrator credentials for [$viserver]"
-$vcred | connect-viserver -server $viserver
+#$vcred = Get-Credential -Message "Enter vCenter administrator credentials for [$viserver]"
+#$vcred | connect-viserver -server $viserver
 
 #$sfconnect = Read-Host "Enter SolidFire MVIP for connection to storage"
-$scred = Get-Credential -Message "Enter SolidFire administrator credentials for [$sfconnect]"
-$scred | connect-sfcluster -target $sfconnect
+#$scred = Get-Credential -Message "Enter SolidFire administrator credentials for [$sfconnect]"
+#$scred | connect-sfcluster -target $sfconnect
 
 
 # SolidFire connection to add ESXi host(s) into:
-$sf = Get-SFClusterInfo | select Name -ExpandProperty Name
+#$sf = Get-SFClusterInfo | select Name -ExpandProperty Name
 
 # grab VDS info
-$vds = Get-VDSwitch -Name $hcivds
+#$vds = Get-VDSwitch -Name $hcivds
 
 Write-Host -ForegroundColor Blue "==============================================================================================================================="
 Write-Host -ForegroundColor Blue "Before starting have you verified all of the variables are correct?"
@@ -86,7 +58,7 @@ Write-Host -ForegroundColor Blue "    vmk0: [$mgmt_portgroup_var]"
 Write-Host -ForegroundColor Blue "    vmk1: [$iscsiA]"
 Write-Host -ForegroundColor Blue "    vmk2: [$iscsiB]"
 Write-Host -ForegroundColor Blue "    vmk3: [$vmotion]"
-Write-Host -ForegroundColor Blue "  The ESXi hosts within [$newcluster] will then setup connections and integrate into NetApp SolidFire [$sf]"
+Write-Host -ForegroundColor Blue "  The ESXi hosts within [$newcluster] will then setup connections and integrate into NetApp SolidFire [$sfconnect]"
 Write-Host -ForegroundColor Blue "If any of this is incorrect, exit and edit scale-vars.ps1 file"
 Write-Host -ForegroundColor Blue "==============================================================================================================================="
 
@@ -95,18 +67,51 @@ Write-Host -ForegroundColor Blue "==============================================
 [uint16]$Choice=1
 While ($Choice -ne 0)
 {
-Write-Host -ForegroundColor Red "Step 1,2 and 3 are expected to be run sequentially. If you have already completed step 1 or step 2, you can start with step 3"
+Write-Host -ForegroundColor Red "Step 1,3 and 4 are expected to be run sequentially. If you have already completed step 1 or step 2, you can start with step 3"
 Write-Host -ForegroundColor Green "What would you like to do?"
-Write-Host -ForegroundColor Green "1: Create new cluster named [$newcluster] in datacenter [$location] within vCenter [$viserver]"
-Write-Host -ForegroundColor Green "2: Add ESXi host to $newcluster and configure host networking to integrate into [$hcivds]"
-Write-Host -ForegroundColor Green "3: Setup SolidFire connections to [$newcluster] and add additional datastores on SolidFire [$sf]"
-Write-Host -ForegroundColor Green "4: Custom - Enter code where you needed to quit if you need to restart at any process"
-Write-Host -ForegroundColor Green "5: Custom - Enter code where you needed to quit if you need to restart at any process"
+Write-Host -ForegroundColor Green "1: Connect to vCenter [$viserver] and SolidFire [$sfconnect]"
+Write-Host -ForegroundColor Green "2: Verify connections to vCenter and SolidFire"
+Write-Host -ForegroundColor Green "3: Create new cluster named [$newcluster] in datacenter [$location] within vCenter connection from step 1"
+Write-Host -ForegroundColor Green "4: Add ESXi host to $newcluster and configure host networking to integrate into [$hcivds]"
+Write-Host -ForegroundColor Green "5: Setup SolidFire connections to [$newcluster] and add additional datastores on SolidFire from step 1"
+Write-Host -ForegroundColor Green "6: Disconnect from vCenter [$viserver] and SolidFire [$sfconnect]"
+Write-Host -ForegroundColor Green "7: Custom - Enter code where you needed to quit if you need to restart at any process"
 Write-Host -ForegroundColor Green "0: Exit"
 [uint16]$Choice=Read-Host "Select the operation you would like to perform [0]"
 switch($Choice)
 {
    1 {
+      ###################################################################################################
+      ##### 1: Connect to vCenter [$viserver] and SolidFire [$sfconnect]
+      ###################################################################################################
+     
+      #$viserver = Read-Host "Enter vCenter FQDN or IP to initiate connection"
+      $vcred = Get-Credential -Message "Enter vCenter administrator credentials for [$viserver]"
+      $vcred | connect-viserver -server $viserver
+
+      #$sfconnect = Read-Host "Enter SolidFire MVIP for connection to storage"
+      $scred = Get-Credential -Message "Enter SolidFire administrator credentials for [$sfconnect]"
+      $scred | connect-sfcluster -target $sfconnect
+
+
+      # SolidFire connection to add ESXi host(s) into:
+      #$sf = Get-SFClusterInfo | select Name -ExpandProperty Name
+
+      # grab VDS info
+      #$vds = Get-VDSwitch -Name $hcivds
+
+
+     }
+   2 {
+     $sf = Get-SFClusterInfo | select Name -ExpandProperty Name
+     Write-Host -ForegroundColor Blue "You are connected to SolidFire Cluster [$sf]"
+     $vi = $global:DefaultVIServer
+     Write-Host -ForegroundColor Blue "You are connected to vCenter Cluster [$vi]"
+     }
+
+
+
+   3 {
       ###################################################################################################
       ##### Create new cluster named [$newcluster] in datacenter [$location]
       ###################################################################################################
@@ -121,10 +126,13 @@ switch($Choice)
       New-Cluster -Name $newcluster -Location $location -HAEnabled -HAAdmissionControlEnabled -HAFailoverLevel 2 -VMSwapfilepolicy "withVM" -HARestartPriority "Medium" -HAIsolationResponse "DoNothing" -DRSEnabled -DRSAutomationLevel "FullyAutomated"
      }
 
-  2 {
+  4 {
       ###################################################################################################
       ##### Add ESXi host to $newcluster and configure host networking to integrate into [$hcivds]
       ###################################################################################################
+      
+       # grab VDS info
+      $vds = Get-VDSwitch -Name $hcivds
 
       #### Start of adding host section ####
       $vmhost = Read-Host "Enter FQDN or IP of ESXi host to add to $newcluster if different from [$s_vmhost]"
@@ -262,10 +270,13 @@ switch($Choice)
           
       }
     }
-  3 {
+  5 {
       ###################################################################################################
       ##### Setup SolidFire connections to [$newcluster] and add additional datastores on SolidFire [$sf]
       ###################################################################################################
+      
+      # SolidFire connection to add ESXi host(s) into:
+      $sf = Get-SFClusterInfo | select Name -ExpandProperty Name
 
       #Setup connections for the new host to NetApp SolidFire [$sf]"
       Write-Host -ForegroundColor Blue "Items included in this section includes:"
@@ -290,11 +301,16 @@ switch($Choice)
         }
       }
     }
-  4 {
+  6 {
       ###################################################################################################
-      ##### Custom Section if needed to start/stop at a specific spot. Copy code into #4
+      ##### Disconnect from vCenter and SolidFire
+      ###################################################################################################
+
+      disconnect-viserver -server $viserver
+      disconnect-sfcluster -target $sfconnect
+      
     }
-  5 {
+  7 {
      ###################################################################################################
      ##### Custom Section if needed to start/stop at a specific spot. Copy code into #5
      ###################################################################################################
