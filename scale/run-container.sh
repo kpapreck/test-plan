@@ -1,1 +1,1 @@
-docker run -it --rm -v $(pwd):/scripts kpapreck/sf-powercli7:latest
+docker run -it --rm -v $(pwd):/root/scripts kpapreck/sf-powercli7:latest
