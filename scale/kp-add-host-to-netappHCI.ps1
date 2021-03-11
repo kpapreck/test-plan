@@ -82,8 +82,9 @@ Write-Host -ForegroundColor Green "2: Verify connections to vCenter and SolidFir
 Write-Host -ForegroundColor Green "3: Create new cluster named [$newcluster] in datacenter [$location] within vCenter connection from step 1"
 Write-Host -ForegroundColor Green "4: Add ESXi host to $newcluster and configure host networking to integrate into [$hcivds]"
 Write-Host -ForegroundColor Green "5: Setup SolidFire connections to [$newcluster] and add additional datastores on SolidFire from step 1"
-Write-Host -ForegroundColor Green "6: Disconnect from vCenter [$viserver] and SolidFire [$sfconnect]"
-Write-Host -ForegroundColor Green "7: Custom - Enter code where you needed to quit if you need to restart at any process"
+Write-Host -ForegroundColor Green "6: Create new Datacenter/Cluster/VDS switch matching setup of NetApp HCI created via NDE"
+Write-Host -ForegroundColor Green "7: Disconnect from vCenter [$viserver] and SolidFire [$sfconnect]"
+Write-Host -ForegroundColor Green "8: Custom - Enter code where you needed to quit if you need to restart at any process"
 Write-Host -ForegroundColor Green "0: Exit"
 [uint16]$Choice=Read-Host "Select the operation you would like to perform [0]"
 switch($Choice)
@@ -123,6 +124,12 @@ switch($Choice)
       ###################################################################################################
       ##### Create new cluster named [$newcluster] in datacenter [$location]
       ###################################################################################################
+      # Create a new datacenter
+      $change = Read-Host "Would you like to create a new datacenter location y/n [n]?"
+        If ($change -eq "y") {
+          $location = Read-Host "Enter new Datacenter name"
+          $Datacenter =  New-Datacenter -location (Get-Folder -NoRecursion) -Name $location
+        }
 
       # Create new vCenter Cluster
       Write-Host -ForegroundColor Blue "Adding $newcluster to vCenter"
@@ -138,7 +145,17 @@ switch($Choice)
       ###################################################################################################
       ##### Add ESXi host to $newcluster and configure host networking to integrate into [$hcivds]
       ###################################################################################################
+      $ask = Read-Host "Are you adding ESXi host to New VDS [$newvds] after step 6 [y/n]"
+      if ($ask -eq "y")
+      {
+        $hcivds = $newvds
+        $newcluster = $newcluster2
+        $iscsiA = $iscsiaPG
+        $iscsiB = $iscsibPG
+        $vmotion = $vmotionPG
+        $mgmt_portgroup_var = $managementPG
 
+      }
        # grab VDS info
       $vds = Get-VDSwitch -Name $hcivds
 
@@ -174,12 +191,12 @@ switch($Choice)
       Write-Host -ForegroundColor Blue "[$vmhost] has been added to [$mycluster]. Starting network configuration and migration from VSS to VDS"
 
       #verifying physical nics are the correct vmnic numbers
-      $nic1 = Read-Host "If this is the correct 1st 10/25G connected physical nic for the new ESXi host(s), continue, otherwise enter value [$nic1var]"
+      $nic1 = Read-Host "If this is the correct 1st 10/25G connected physical nic for the new ESXi host, continue, otherwise enter value [$nic1var]"
         if([string]::IsNullOrWhiteSpace($nic1))
           {
             $nic1=$nic1var
           }
-      $nic2 = Read-Host "If this is the correct 2nd 10/25G connected physical nic for the new ESXi host(s), continue, otherwise enter value [$nic2var]"
+      $nic2 = Read-Host "If this is the correct 2nd 10/25G connected physical nic for the new ESXi host, continue, otherwise enter value [$nic2var]"
         if([string]::IsNullOrWhiteSpace($nic2))
         {
           $nic2=$nic2var
@@ -310,6 +327,93 @@ switch($Choice)
       }
     }
   6 {
+      ###################################################################################################
+      ##### Create new Datacenter/Cluster/VDS switch matching setup of NetApp HCI created via NDE
+      ###################################################################################################
+      Write-Host -ForegroundColor Blue "Before starting have you verified all of the variables from scale-vars.ps1 are correct?"
+      Write-Host -ForegroundColor Blue "New datacenter: [$location2]"
+      Write-Host -ForegroundColor Blue "New cluster: [$newcluster2]"
+      Write-Host -ForegroundColor Blue "New VDS switch: [$newvds]"
+      Write-Host -ForegroundColor Blue "Number of uplinks: [$numuplinks]"
+      Write-Host -ForegroundColor Blue "Management Port Group: [$managementPG] on VLAN [$mgmtVLAN]"
+      Write-Host -ForegroundColor Blue "iSCSI-A Port Group: [$iscsiaPG] on VLAN [$iscsiVLAN]"
+      Write-Host -ForegroundColor Blue "iSCSI-B Port Group: [$iscsbPG] on VLAN [$iscsiVLAN]"
+      Write-Host -ForegroundColor Blue "VM_Network Port Group: [$vmPG] on VLAN [$vmnetworkVLAN]"
+      Write-Host -ForegroundColor Blue "vMotion Port Group: [$vmotionPG] on VLAN [$vmotionVLAN]"
+
+      $change = Read-Host "Would you like to continue y/n [y]?"
+        If ($change -eq "n") {
+          break;
+        }
+      # Create a new datacenter
+      $dc = Get-Datacenter -Name $location2 | select Name -ExpandProperty Name
+        If ($dc -ne $location2) {
+          $Datacenter = New-Datacenter -location (Get-Folder -NoRecursion) -Name $location2
+        }
+
+      # Create new vCenter Cluster
+      Write-Host -ForegroundColor Blue "Adding $newcluster2 to vCenter"
+
+      #matching NetApp HCI defaults:
+      #  HAEnabled, AddmissionControlEnabled, HAfailoverlevel2,
+      #  swap withVM, DRS fullyautomated, Default VM restart Medium,, isolation disabled
+
+      New-Cluster -Name $newcluster2 -Location $location2 -HAEnabled -HAAdmissionControlEnabled -HAFailoverLevel 2 -VMSwapfilepolicy "withVM" -HARestartPriority "Medium" -HAIsolationResponse "DoNothing" -DRSEnabled -DRSAutomationLevel "FullyAutomated"
+
+      New-VDSwitch -Location $location2 -Name $newvds -NumUplinkPorts $numuplinks -Mtu 9000 -LinkDiscoveryProtocol "LLDP" -LinkDiscoveryProtocolOperation "Both"
+      (Get-VDSwitch $newvds | get-view).EnableNetworkResourceManagement($true)
+
+      $dvsLink = @{
+
+          'dvUplink1' = 'Uplink 1'
+          'dvUplink2' = 'Uplink 2'
+          'dvUplink3' = 'Uplink 3'
+          'dvUplink4' = 'Uplink 4'
+          'dvUplink5' = 'Uplink 5'
+          'dvUplink6' = 'Uplink 6'
+
+      }
+
+      $vds = Get-VDSwitch -Name $newvds
+      $spec = New-Object VMware.Vim.DVSConfigSpec
+      $spec.ConfigVersion = $vds.ExtensionData.Config.ConfigVersion
+      $spec.UplinkPortPolicy = New-Object VMware.Vim.DVSNameArrayUplinkPortPolicy
+      $vds.ExtensionData.Config.UplinkPortPolicy.UplinkPortName | %{
+          $spec.UplinkPortPolicy.UplinkPortName += $dvsLink[$_]
+      }
+      $vds.ExtensionData.ReconfigureDvs($spec)
+
+
+      New-VDPortGroup -VDSwitch $newvds -Name "$managementPG" -NumPorts 8 -VlanID $mgmtVLAN
+      Get-VDportgroup "$managementPG" -VDswitch "$newvds" | Get-VDPortgroupOverridePolicy | Set-VDPortGroupOverridePolicy -TrafficShapingOverrideAllowed $false -VlanOverrideAllowed $true -SecurityOverrideAllowed $true
+      Get-VDportgroup "$managementPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction In | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
+      Get-VDportgroup "$managementPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction Out | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
+
+
+      New-VDPortGroup -VDSwitch $newvds -Name "$iscsiaPG" -NumPorts 8 -VlanID $iscsiVLAN
+      Get-VDportgroup "$iscsiaPG" -VDswitch "$newvds" | Get-VDPortgroupOverridePolicy | Set-VDPortGroupOverridePolicy -TrafficShapingOverrideAllowed $false -VlanOverrideAllowed $true -SecurityOverrideAllowed $true
+      Get-VDportgroup "$iscsiaPG" -VDswitch "$newvds" | Get-VDUplinkTeamingPolicy | Set-VDUplinkTeamingPolicy -ActiveUplinkPort $uplink2 -UnusedUplinkPort $uplink1
+
+      New-VDPortGroup -VDSwitch $newvds -Name "$iscsibPG" -NumPorts 8 -VlanID $iscsiVLAN
+      Get-VDportgroup "$iscsibPG" -VDswitch "$newvds" | Get-VDPortgroupOverridePolicy | Set-VDPortGroupOverridePolicy -TrafficShapingOverrideAllowed $false -VlanOverrideAllowed $true -SecurityOverrideAllowed $true
+      Get-VDportgroup "$iscsibPG" -VDswitch "$newvds" | Get-VDUplinkTeamingPolicy | Set-VDUplinkTeamingPolicy -ActiveUplinkPort $uplink1 -UnusedUplinkPort $uplink2
+
+      New-VDPortGroup -VDSwitch $newvds -Name "$vmPG" -NumPorts 41 -VlanID $vmnetworkVLAN
+      Get-VDportgroup "$vmPG" -VDswitch "$newvds" | Get-VDPortgroupOverridePolicy | Set-VDPortGroupOverridePolicy -TrafficShapingOverrideAllowed $false -VlanOverrideAllowed $true -SecurityOverrideAllowed $true
+      Get-VDportgroup "$vmPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction In | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
+      Get-VDportgroup "$vmPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction Out | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
+
+
+      New-VDPortGroup -VDSwitch $newvds -Name "$vmotionPG" -NumPorts 8 -VlanID $vmotionVLAN
+      Get-VDportgroup "$vmotionPG" -VDswitch "$newvds" | Get-VDPortgroupOverridePolicy | Set-VDPortGroupOverridePolicy -TrafficShapingOverrideAllowed $false -VlanOverrideAllowed $true -SecurityOverrideAllowed $true
+      Get-VDportgroup "$vmotionPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction In | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
+      Get-VDportgroup "$vmotionPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction Out | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
+
+
+
+    }
+
+  7 {
       ###################################################################################################
       ##### Disconnect from vCenter and SolidFire
       ###################################################################################################

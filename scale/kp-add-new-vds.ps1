@@ -3,18 +3,6 @@
 ###################################################################################################
 . ./scale-vars.ps1
 
-$newvds = "NetApp HCI VDS 02"
-$numuplinks = 2
-$mgmtVLAN = ""
-$iscsiVLAN = 91
-$vmnetworkVLAN = ""
-$vmotionVLAN = 89
-
-$managementPG = "$newvds-Management"
-$iscsiaPG = "$newvds-iSCSI-A"
-$iscsibPG = "$newvds-iSCSI-B"
-$vmPG = "$newvds-VM_Network"
-$vmotionPG = "$newvds-vMotion"
 
 New-VDSwitch -Location $location -Name $newvds -NumUplinkPorts $numuplinks -Mtu 9000 -LinkDiscoveryProtocol "LLDP" -LinkDiscoveryProtocolOperation "Both"
 (Get-VDSwitch $newvds | get-view).EnableNetworkResourceManagement($true)
