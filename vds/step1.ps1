@@ -1,3 +1,10 @@
+###################################################################################################
+##### Variables used in script
+###################################################################################################
+. ./scale-vars.ps1
+
+$newvds = "New VDS Switch"
+
 $VDSw = "NetApp HCI VDS 01"
 $vds = Get-VDSwitch -Name $VDSw
 $nic1 = "vmnic0"
@@ -17,14 +24,3 @@ foreach ($vmhost in $vmhost_array)
 $Phnic = $vmhost |Get-VMHostNetworkAdapter -Physical -Name $nic2
 Write-Host  -Object "Adding vmnic (redundant) to $vds"
 Add-VDSwitchPhysicalNetworkAdapter -DistributedSwitch $vds -VMHostPhysicalNic $Phnic -Confirm:$false
-
-
-
-
-
-
-
-
-
-
-}
