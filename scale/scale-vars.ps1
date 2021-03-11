@@ -9,17 +9,10 @@
 #       This code will is used to gather information for scaling NetApp HCI
 #	To run: . ./scale-vars.ps1
 
-###Description of Variables###
-# newcluster = name of the new cluster being created
-# location = the datacenter within NetApp HCI to add the cluster
-# hcivds = the existing VDS switch that you are looking to add the new hosts into
-# nic1 and nic2 are the vmnics of the new host adding to the cluster
-# Uplinks are the uplinks to add to for a 2-cable setup
-# switch = VSS switch created by default before adding
-# iscsiA/iscsiB/vmotion = vmk port group names from existing VDS to integrate into the new host
-# iscsiSubnet = subnet used for iscsiA/iscsiB
-# vmotionSubnet = subnet used for vmotion
 
+###################################################################################################
+##### Connection variables used
+###################################################################################################
 #solidfire MVIP
 $sfconnect = "10.45.85.191"
 
@@ -27,25 +20,35 @@ $sfconnect = "10.45.85.191"
 $viserver = "10.45.85.185"
 
 
+###################################################################################################
+##### Required variables for vCenter cluster/datacenter
+###################################################################################################
+
 #Compute cluster name to add to datacenter
-$newcluster = "mycluster"
+$newcluster = "NetApp-Cluster-02"
+
+#vCenter Datacenter to Add Host/Cluster to [Default NetApp HCI: "NetApp-HCI-Datacenter-01"]
+$location = "NetApp-Datacenter-02"
 
 
-##### Variables using Default NetApp HCI Setup #####
-#vCenter Datacenter to Add Host/Cluster to [Default: "NetApp-HCI-Datacenter-01"]
-$location = "NetApp-HCI-Datacenter-01"
+###################################################################################################
+##### Required variables for adding ESXi host to existing VDS switch with 2 uplink
+###################################################################################################
 
-#NetApp HCI VDS to add cluster into [Default: "NetApp HCI VDS 01"]
+#VDS to add cluster into [Default NetApp HCI: "NetApp HCI VDS 01"]
 $hcivds = "NetApp HCI VDS 01"
 
 #ESXi standard switch to migrate to VDS after adding to the cluster
 $switch = "vSwitch0"
 
-#ESXi Uplinks
+#ESXi Uplinks [Default NetApp HCI: "Uplink 1" and "Uplink 2"]
 $uplink1 = "Uplink 1"
 $uplink2 = "Uplink 2"
 
 #NetApp HCI VDS Port Group Names for migration
+#Default iSCSI for NetApp HCI are: []"NetApp HCI VDS 01-iSCSI-A"] ["NetApp HCI VDS 01-iSCSI-B]
+#Default vMotion for NetApp HCI is: []"NetApp HCI VDS 01-vMotion"]
+#Default Management for NetApp HCI is: ["NetApp HCI VDS 01-Management_Network"]
 $iscsiA = "NetApp HCI VDS 01-iSCSI-A"
 $iscsiB = "NetApp HCI VDS 01-iSCSI-B"
 $vmotion = "NetApp HCI VDS 01-vMotion"
@@ -57,6 +60,39 @@ $mgmt_portgroup_var = "Management Network 89"
 
 
 
+
+###################################################################################################
+##### Required variables for adding new VDS
+###################################################################################################
+#new datacenter and cluster to add to vCenter
+#$location2 = "NetApp-Datacenter-02"
+#$newcluster2 = "NetApp-Cluster-02"
+
+$newvds = "NetApp VDS 02"
+$numuplinks = 2
+$mgmtVLAN = 89
+$iscsiVLAN = 91
+$vmnetworkVLAN = 89
+$vmotionVLAN = 89
+
+#VDS uplink names
+$dvuplink1 = "Uplink 1"
+$dvuplink2 = "Uplink 2"
+$dvuplink3 = "Uplink 3"
+$dvuplink4 = "Uplink 4"
+$dvuplink5 = "Uplink 5"
+$dvuplink6 = "Uplink 6"
+
+#Port group names for new VDS switch
+$managementPG = "$newvds-Management"
+$iscsiaPG = "$newvds-iSCSI-A"
+$iscsibPG = "$newvds-iSCSI-B"
+$vmPG = "$newvds-VM_Network"
+$vmotionPG = "$newvds-vMotion"
+
+###################################################################################################
+##### Required variables for compute node into vCenter
+###################################################################################################
 ##### ESXi Host Information #####
 #ESXi physical 10/25G nics to add into VDS
 $nic1var = "vmnic0"
@@ -64,28 +100,32 @@ $nic2var = "vmnic1"
 
 
 #ESXi host ip information for scaling compute
-# VM host properties
+#VM host IP or FQDN to add to environment
 $s_vmhost = "winf-evo3-blade4.ntaplab.com"
 
-#iscsiA IP
+#iscsiA IP for host you are adding
 $s_ip1 = "10.45.91.217"
 
-#iscsiB IP
+#iscsiB IP for host you are adding
 $s_ip2 = "10.45.91.218"
 
-#iscsi subnet
+#iscsi subnet for host you are adding
 $iscsiSubnet_var = "255.255.255.0"
 
-#vmotion ip for ESXi host
+#vmotion ip for ESXi host you are adding
 $s_ip3 = "10.45.89.191"
 
-#vmotion subnet
+#vmotion subnet for host you are adding
 $vmotionSubnet_var = "255.255.255.0"
 
 ###################################################################################################
 ##### Optional Section Depending on Options
 ###################################################################################################
 ##### SolidFire Information #####
+
+#access group to use [Default NetApp HCI: "NetApp-HCI"]
+$accessgroup="$newcluster"
+
 #number of datastores to create
 $qtyvol = "1"
 
@@ -96,22 +136,3 @@ $sizeGB = "1024"
 $min = "1000"
 $max = "10000"
 $burst = "50000"
-
-
-##### Variables for creating new environment for 3rd party #####
-#new datacenter and cluster to add to vCenter
-$location2 = "NetApp-Datacenter-02"
-$newcluster2 = "NetApp-Cluster-02"
-
-$newvds = "NetApp HCI VDS 02"
-$numuplinks = 2
-$mgmtVLAN = 89
-$iscsiVLAN = 91
-$vmnetworkVLAN = 89
-$vmotionVLAN = 89
-
-$managementPG = "$newvds-Management"
-$iscsiaPG = "$newvds-iSCSI-A"
-$iscsibPG = "$newvds-iSCSI-B"
-$vmPG = "$newvds-VM_Network"
-$vmotionPG = "$newvds-vMotion"

@@ -1,10 +1,10 @@
 ﻿function New-TenantOrCluster{
 <#
     .Synopsis
-	
+
  	 Creates all components necessary to populate SolidFire storage on a new cluster.
-	 
-	.Description 
+
+	.Description
  	 Creates all components necessary to populate SolidFire storage on a new cluster.  Not all conditions are managed in this script.
      Modifications may need to be made in your environment based on your vSphere configurations.
 
@@ -16,11 +16,11 @@
      Creates iSCSI Targets on ESXi host iSCSI HBA
      Rescans HBA
      Creates Datastores based on Volume name in the vSphere Cluster
-	 
+
 	.Parameter Cluster
-	
+
      Represents a vSphere cluster where the volumes should be added.
-	
+
 	.Parameter qtyVolumes
 
      The number of volumes that need to be added to the cluster.
@@ -28,7 +28,7 @@
     .Parameter StartingNumber
 
      The first number that should be represented in the range for the new volumes.
-	 
+
     .Parameter sizeGB
 
      Size of each new volume in GB.
@@ -46,7 +46,7 @@
      Minimum IOPs value.
 
     .Parameter burst
-     
+
      Minimum IOPs value.
 
     .Parameter InitiatorSecret
@@ -56,9 +56,9 @@
     .Parameter TargetSecret
 
      Custom target secret for the account. Must be between 12 and 16 characters in length.
-	
+
     .Example
-	
+
 	 New-TenantOrCluster -Cluster Cluster02 -qtyVolumes 4 -sizeGB 1024 -min 1000 -max 1200 -burst 2000
 
      Basic usage of the New-TenantOrCluster function to deploy 4 volumes.
@@ -75,15 +75,15 @@
 
      Creates volumes for an account based on Tenant name to specified cluster. Custom Target and Initiator secrets are provided and a starting volume number provided.
      Specifically useful when adding additional volumes to existing cluster or tenant.
-	 
+
 	.Link
 	 http://www.github.com/solidfire/powershell
-	 
+
 	.Notes
-	
+
 	====================================================================
-	Disclaimer: This script is written as best effort and provides no 
-	warranty expressed or implied. Please contact the author(s) if you 
+	Disclaimer: This script is written as best effort and provides no
+	warranty expressed or implied. Please contact the author(s) if you
 	have questions about this script before running or modifying
 	====================================================================
 #>
@@ -178,18 +178,19 @@ $volumes = $volnumbers | %{Get-SFVolume -Name ("$accountname-$_")}
 # Create Volume Access Group and Add volumes
 #############################################
 
-Write-Host "Creating the volume access group NetApp-HCI"
 
-If(!(Get-SFVolumeAccessGroup -Name NetApp-HCI -ErrorAction SilentlyContinue)){
+Write-Host "Creating the volume access group $accessgroup"
 
-    New-SFVolumeAccessGroup -Name NetApp-HCI -VolumeIDs $volumes.VolumeID
+If(!(Get-SFVolumeAccessGroup -Name $accessgroup -ErrorAction SilentlyContinue)){
 
-Write-Host "Creating the volume access group NetApp-HCI complete"
+    New-SFVolumeAccessGroup -Name $accessgroup -VolumeIDs $volumes.VolumeID
+
+Write-Host "Creating the volume access group $accessgroup complete"
 
 }Else{
-Write-Host "Adding volumes to existing volume access group NetApp-HCI"
-    $volumes | Add-SFVolumeToVolumeAccessGroup -VolumeAccessGroupID (Get-SFVolumeAccessGroup NetApp-HCI).VolumeAccessGroupID
-Write-Host "Adding volumes to existing volume access group NetApp-HCI complete"
+Write-Host "Adding volumes to existing volume access group $accessgroup"
+    $volumes | Add-SFVolumeToVolumeAccessGroup -VolumeAccessGroupID (Get-SFVolumeAccessGroup $accessgroup).VolumeAccessGroupID
+Write-Host "Adding volumes to existing volume access group $accessgroup complete"
 }
 
 # Collects cluster's SVIP dynamically
@@ -213,7 +214,7 @@ foreach($vmhost in $vmhosts){
 ###################################
 # Add IQNs to Volume Access Group
 ###################################
-$vid = (Get-SFVolumeAccessGroup NetApp-HCI).VolumeAccessGroupID
+$vid = (Get-SFVolumeAccessGroup $accessgroup).VolumeAccessGroupID
 # Collect IQNs for each host iSCSI adapater
 $IQNs = $vmhosts | Select name,@{n="IQN";e={$_.ExtensionData.Config.StorageDevice.HostBusAdapter.IscsiName}}
 
@@ -223,7 +224,7 @@ ForEach($IQN in $IQNs){
         Write-Host "Adding the ESXi host IQN $($IQN.IQN) to the Volume Access Group"
         $IQN | %{Add-SFInitiatorToVolumeAccessGroup -VolumeAccessGroupID $vid -Initiators $_.IQN}
         # Note: % is PowerShell for forEach
-        
+
         Write-Host "Adding the ESXi host IQNs to the Volume Access Group Complete"
 
     }Else{
