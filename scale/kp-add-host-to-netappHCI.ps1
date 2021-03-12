@@ -343,8 +343,15 @@ switch($Choice)
 
           New-VMHostNetworkAdapter -VMHost $vmhost -PortGroup $vmotion -virtualSwitch $hcivds -IP $ip3 -SubnetMask $vmotionSubnet -Mtu 9000 -VMotionEnabled $true
 
+
           Write-Host -ForegroundColor Blue "Removing vSwitch0 from [$vmhost]"
+          Start-Sleep -s 3
+
+
           Remove-VirtualSwitch -VirtualSwitch "vSwitch0" -Confirm:$false
+
+          Write-Host -ForegroundColor Blue "Removed vSwitch0 from [$vmhost]"
+
 
           Write-Host -ForegroundColor Blue "Enable iSCSI on [$vmhost]"
           Get-VMHostStorage -VMHost $vmhost | Set-VMHostStorage -SoftwareIScsiEnabled $true
@@ -414,95 +421,16 @@ switch($Choice)
 
   6 {
       ###################################################################################################
-      ##### Create new Datacenter/Cluster/VDS switch matching setup of NetApp HCI created via NDE
+      ##### Custom Section if needed to start/stop at a specific spot
       ###################################################################################################
-      Write-Host -ForegroundColor Blue "Before starting have you verified all of the variables from scale-vars.ps1 are correct?"
-      Write-Host -ForegroundColor Blue "New datacenter: [$location2]"
-      Write-Host -ForegroundColor Blue "New cluster: [$newcluster2]"
-      Write-Host -ForegroundColor Blue "New VDS switch: [$newvds]"
-      Write-Host -ForegroundColor Blue "Number of uplinks: [$numuplinks]"
-      Write-Host -ForegroundColor Blue "Management Port Group: [$managementPG] on VLAN [$mgmtVLAN]"
-      Write-Host -ForegroundColor Blue "iSCSI-A Port Group: [$iscsiaPG] on VLAN [$iscsiVLAN]"
-      Write-Host -ForegroundColor Blue "iSCSI-B Port Group: [$iscsbPG] on VLAN [$iscsiVLAN]"
-      Write-Host -ForegroundColor Blue "VM_Network Port Group: [$vmPG] on VLAN [$vmnetworkVLAN]"
-      Write-Host -ForegroundColor Blue "vMotion Port Group: [$vmotionPG] on VLAN [$vmotionVLAN]"
-
-      $change = Read-Host "Would you like to continue y/n [y]?"
-        If ($change -eq "n") {
-          break;
-        }
-      # Create a new datacenter
-      $dc = Get-Datacenter -Name $location2 | select Name -ExpandProperty Name
-        If ($dc -ne $location2) {
-          $Datacenter = New-Datacenter -location (Get-Folder -NoRecursion) -Name $location2
-        }
-
-      # Create new vCenter Cluster
-      Write-Host -ForegroundColor Blue "Adding $newcluster2 to vCenter"
-
-      #matching NetApp HCI defaults:
-      #  HAEnabled, AddmissionControlEnabled, HAfailoverlevel2,
-      #  swap withVM, DRS fullyautomated, Default VM restart Medium,, isolation disabled
-
-      New-Cluster -Name $newcluster2 -Location $location2 -HAEnabled -HAAdmissionControlEnabled -HAFailoverLevel 2 -VMSwapfilepolicy "withVM" -HARestartPriority "Medium" -HAIsolationResponse "DoNothing" -DRSEnabled -DRSAutomationLevel "FullyAutomated"
-
-      New-VDSwitch -Location $location2 -Name $newvds -NumUplinkPorts $numuplinks -Mtu 9000 -LinkDiscoveryProtocol "LLDP" -LinkDiscoveryProtocolOperation "Both"
-      (Get-VDSwitch $newvds | get-view).EnableNetworkResourceManagement($true)
-
-      $dvsLink = @{
-
-          'dvUplink1' = "Uplink 1"
-          'dvUplink2' = $dvuplink2
-          'dvUplink3' = "$dvuplink3"
-          'dvUplink4' = "$dvuplink4"
-          'dvUplink5' = "$dvuplink5"
-          'dvUplink6' = "$dvuplink6"
-
-      }
-
-      $vds = Get-VDSwitch -Name $newvds
-      $spec = New-Object VMware.Vim.DVSConfigSpec
-      $spec.ConfigVersion = $vds.ExtensionData.Config.ConfigVersion
-      $spec.UplinkPortPolicy = New-Object VMware.Vim.DVSNameArrayUplinkPortPolicy
-      $vds.ExtensionData.Config.UplinkPortPolicy.UplinkPortName | %{
-          $spec.UplinkPortPolicy.UplinkPortName += $dvsLink[$_]
-      }
-      $vds.ExtensionData.ReconfigureDvs($spec)
-
-
-      New-VDPortGroup -VDSwitch $newvds -Name "$managementPG" -NumPorts 8 -VlanID $mgmtVLAN
-      Get-VDportgroup "$managementPG" -VDswitch "$newvds" | Get-VDPortgroupOverridePolicy | Set-VDPortGroupOverridePolicy -TrafficShapingOverrideAllowed $false -VlanOverrideAllowed $true -SecurityOverrideAllowed $true
-      Get-VDportgroup "$managementPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction In | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
-      Get-VDportgroup "$managementPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction Out | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
-
-
-      New-VDPortGroup -VDSwitch $newvds -Name "$iscsiaPG" -NumPorts 8 -VlanID $iscsiVLAN
-      Get-VDportgroup "$iscsiaPG" -VDswitch "$newvds" | Get-VDPortgroupOverridePolicy | Set-VDPortGroupOverridePolicy -TrafficShapingOverrideAllowed $false -VlanOverrideAllowed $true -SecurityOverrideAllowed $true
-      Get-VDportgroup "$iscsiaPG" -VDswitch "$newvds" | Get-VDUplinkTeamingPolicy | Set-VDUplinkTeamingPolicy -ActiveUplinkPort $uplink2 -UnusedUplinkPort $uplink1
-
-      New-VDPortGroup -VDSwitch $newvds -Name "$iscsibPG" -NumPorts 8 -VlanID $iscsiVLAN
-      Get-VDportgroup "$iscsibPG" -VDswitch "$newvds" | Get-VDPortgroupOverridePolicy | Set-VDPortGroupOverridePolicy -TrafficShapingOverrideAllowed $false -VlanOverrideAllowed $true -SecurityOverrideAllowed $true
-      Get-VDportgroup "$iscsibPG" -VDswitch "$newvds" | Get-VDUplinkTeamingPolicy | Set-VDUplinkTeamingPolicy -ActiveUplinkPort $uplink1 -UnusedUplinkPort $uplink2
-
-      New-VDPortGroup -VDSwitch $newvds -Name "$vmPG" -NumPorts 41 -VlanID $vmnetworkVLAN
-      Get-VDportgroup "$vmPG" -VDswitch "$newvds" | Get-VDPortgroupOverridePolicy | Set-VDPortGroupOverridePolicy -TrafficShapingOverrideAllowed $false -VlanOverrideAllowed $true -SecurityOverrideAllowed $true
-      Get-VDportgroup "$vmPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction In | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
-      Get-VDportgroup "$vmPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction Out | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
-
-
-      New-VDPortGroup -VDSwitch $newvds -Name "$vmotionPG" -NumPorts 8 -VlanID $vmotionVLAN
-      Get-VDportgroup "$vmotionPG" -VDswitch "$newvds" | Get-VDPortgroupOverridePolicy | Set-VDPortGroupOverridePolicy -TrafficShapingOverrideAllowed $false -VlanOverrideAllowed $true -SecurityOverrideAllowed $true
-      Get-VDportgroup "$vmotionPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction In | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
-      Get-VDportgroup "$vmotionPG" -VDswitch "$newvds" | Get-VDTrafficShapingPolicy -Direction Out | Set-VDTrafficShapingPolicy -Enabled $true -AverageBandwidth 1000000000 -BurstSize 65536000 -PeakBandwidth 1200000000
-
 
 
     }
 
 
-  8 {
+  7 {
      ###################################################################################################
-     ##### Custom Section if needed to start/stop at a specific spot. Copy code into #5
+     ##### Custom Section if needed to start/stop at a specific spot
      ###################################################################################################
 
     }

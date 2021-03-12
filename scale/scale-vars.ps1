@@ -22,7 +22,7 @@ $viserver = "10.45.85.185"
 
 
 ###################################################################################################
-##### Required variables for vCenter cluster/datacenter
+##### (2) Required variables for vCenter cluster/datacenter
 ###################################################################################################
 
 #Compute cluster name to add to datacenter
@@ -33,7 +33,7 @@ $location = "NetApp-HCI-Datacenter-01"
 
 
 ###################################################################################################
-##### Required variables for adding ESXi host to existing VDS switch with 2 uplink
+##### (3) Required variables for adding ESXi host to existing VDS switch with 2 uplink
 ###################################################################################################
 
 #VDS to add cluster into [Default NetApp HCI: "NetApp HCI VDS 01"]
@@ -47,7 +47,7 @@ $uplink1 = "Uplink 1"
 $uplink2 = "Uplink 2"
 
 #NetApp HCI VDS Port Group Names for migration
-#Default iSCSI for NetApp HCI are: []"NetApp HCI VDS 01-iSCSI-A"] ["NetApp HCI VDS 01-iSCSI-B]
+#Default iSCSI for NetApp HCI are: ["NetApp HCI VDS 01-iSCSI-A"] ["NetApp HCI VDS 01-iSCSI-B]
 #Default vMotion for NetApp HCI is: []"NetApp HCI VDS 01-vMotion"]
 #Default Management for NetApp HCI is: ["NetApp HCI VDS 01-Management_Network"]
 $iscsiA = "NetApp HCI VDS 01-iSCSI-A"
@@ -65,15 +65,24 @@ $mgmt_portgroup_var = "Management Network 89"
 ###################################################################################################
 ##### Required variables for adding new VDS
 ###################################################################################################
-#new datacenter and cluster to add to vCenter
-#$location2 = "NetApp-Datacenter-02"
-#$newcluster2 = "NetApp-Cluster-02"
 
+#new distributed switch name to create
 $newvds = "NetApp VDS 02"
+
+#number of uplinks to add to the switch
 $numuplinks = 2
+
+#VLANs for the specific port groups you are adding into
+#management port group VLAN
 $mgmtVLAN = 89
+
+#iscsi port group VLAN
 $iscsiVLAN = 91
+
+#VM_Network port group VLAN
 $vmnetworkVLAN = 89
+
+#vMotion port group VLAN
 $vmotionVLAN = 89
 
 #VDS uplink names
