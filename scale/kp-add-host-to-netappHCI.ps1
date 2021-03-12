@@ -382,7 +382,7 @@ switch($Choice)
       Write-Host -ForegroundColor Blue "Items included in this section includes:"
       Write-Host -ForegroundColor Blue "  Creating new account called [$newcluster]"
       Write-Host -ForegroundColor Blue "  Creating # of volumes of X size and specified QoS settings on SolidFire"
-      Write-Host -ForegroundColor Blue "  Adding these volumes to NetApp-HCI access group (or a different one if changed)"
+      Write-Host -ForegroundColor Blue "  Adding these volumes to $accessgroup access group"
       Write-Host -ForegroundColor Blue "  Adding SolidFire SVIP to ESXi host(s) that reside within $newcluster"
       Write-Host -ForegroundColor Blue "  Creating VMware datastores on ESXi hosts based on the volumes created"
       Write-Host -ForegroundColor Blue "  Rescanning adapters to complete the setup"
@@ -390,7 +390,7 @@ switch($Choice)
       If ($continue -eq "y"){
         #This assumes that New-TenantOrCluster-NetAppHCI.ps1 resides in the same directory as this script
         #This script also assumes an active session to both vCenter and SolidFire
-        Write-Host -ForegroundColor Blue "Datastores to add: [$qtyvol] of size [$sizeGB] using QoS Min [$min], Max [$max] and Burst [$burst] IOPs"
+        Write-Host -ForegroundColor Blue "Datastores to add: [$qtyvol] of size [$sizeGB GB] using QoS Min [$min], Max [$max] and Burst [$burst] IOPs"
 	$change = Read-Host "Would you like to manually change any of these values, y/n [n]"
         . ./New-TenantOrCluster-NetAppHCI.ps1
         If ($change -eq "y") {

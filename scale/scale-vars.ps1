@@ -18,6 +18,7 @@ $sfconnect = "10.45.85.191"
 
 #vCenter IP/FQDN
 $viserver = "10.45.85.185"
+#$viserver = "demo-vc02.ntaplab.com"
 
 
 ###################################################################################################
@@ -25,10 +26,10 @@ $viserver = "10.45.85.185"
 ###################################################################################################
 
 #Compute cluster name to add to datacenter
-$newcluster = "NetApp-Cluster-02"
+$newcluster = "NetApp-HCI-Cluster-02"
 
 #vCenter Datacenter to Add Host/Cluster to [Default NetApp HCI: "NetApp-HCI-Datacenter-01"]
-$location = "NetApp-Datacenter-02"
+$location = "NetApp-HCI-Datacenter-01"
 
 
 ###################################################################################################
@@ -99,8 +100,7 @@ $nic1var = "vmnic0"
 $nic2var = "vmnic1"
 
 
-#ESXi host ip information for scaling compute
-#VM host IP or FQDN to add to environment
+#ESXi host ip or FQDN information for scaling compute
 $s_vmhost = "winf-evo3-blade4.ntaplab.com"
 
 #iscsiA IP for host you are adding
@@ -119,9 +119,8 @@ $s_ip3 = "10.45.89.191"
 $vmotionSubnet_var = "255.255.255.0"
 
 ###################################################################################################
-##### Optional Section Depending on Options
+##### SolidFire Information
 ###################################################################################################
-##### SolidFire Information #####
 
 #access group to use [Default NetApp HCI: "NetApp-HCI"]
 $accessgroup="$newcluster"
