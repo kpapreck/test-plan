@@ -39,8 +39,8 @@ $location = "NetApp-HCI-Datacenter-01"
 #VDS to add cluster into [Default NetApp HCI: "NetApp HCI VDS 01"]
 $hcivds = "NetApp HCI VDS 01"
 
-#ESXi standard switch to migrate to VDS after adding to the cluster
-$switch = "vSwitch0"
+#ESXi standard switch to migrate to VDS after adding to the cluster - not currently used - assumes "vSwitch0"
+#$switch = "vSwitch0"
 
 #ESXi Uplinks [Default NetApp HCI: "Uplink 1" and "Uplink 2"]
 $uplink1 = "Uplink 1"
